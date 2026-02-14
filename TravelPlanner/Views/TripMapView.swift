@@ -71,34 +71,97 @@ struct TripMapView: View {
     // MARK: - Trip Picker
 
     private var tripPicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(allTrips) { trip in
-                    let isSelected = trip.id == (selectedTripID ?? allTrips.first?.id)
-                    Button {
-                        selectedTripID = trip.id
-                    } label: {
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(statusColor(trip.status))
-                                .frame(width: 8, height: 8)
-                            Text(trip.name)
-                                .font(.subheadline)
-                                .fontWeight(isSelected ? .semibold : .regular)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(isSelected ? Color.blue.opacity(0.12) : Color(.systemGray6))
-                        .foregroundStyle(isSelected ? .blue : .primary)
-                        .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
+        VStack(spacing: 0) {
+            // Section label
+            HStack {
+                Text("SELECT A TRIP")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.secondary)
+                    .tracking(0.5)
+                Spacer()
+                Text("\(allTrips.count) trips")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
+
+            // Trip cards
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(allTrips) { trip in
+                        tripCard(trip)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+            }
         }
         .background(.ultraThinMaterial)
+    }
+
+    // MARK: - Trip Card
+
+    private func tripCard(_ trip: TripEntity) -> some View {
+        let isSelected = trip.id == (selectedTripID ?? allTrips.first?.id)
+        let stopCount = trip.days.flatMap { $0.stops }.count
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedTripID = trip.id
+            }
+        } label: {
+            tripCardLabel(trip: trip, isSelected: isSelected, stopCount: stopCount)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func tripCardLabel(trip: TripEntity, isSelected: Bool, stopCount: Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(trip.name)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                StatusBadge(status: trip.status)
+            }
+
+            tripCardDestination(trip: trip, isSelected: isSelected)
+
+            tripCardStats(trip: trip, isSelected: isSelected, stopCount: stopCount)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(width: 220)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isSelected ? Color.blue : Color(.systemGray6))
+        )
+        .foregroundStyle(isSelected ? .white : .primary)
+    }
+
+    private func tripCardDestination(trip: TripEntity, isSelected: Bool) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "mappin")
+                .font(.caption2)
+            Text(trip.destination)
+                .font(.caption)
+                .lineLimit(1)
+        }
+        .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+    }
+
+    private func tripCardStats(trip: TripEntity, isSelected: Bool, stopCount: Int) -> some View {
+        HStack(spacing: 8) {
+            Label("\(trip.durationInDays)d", systemImage: "calendar")
+                .font(.caption2)
+            Label("\(stopCount) stops", systemImage: "mappin.circle")
+                .font(.caption2)
+        }
+        .foregroundColor(isSelected ? .white.opacity(0.7) : .gray)
     }
 
     // MARK: - Map
