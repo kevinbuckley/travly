@@ -7,6 +7,7 @@ struct AddStopSheet: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(LocationManager.self) private var locationManager: LocationManager?
 
     let day: DayEntity
 
@@ -22,71 +23,155 @@ struct AddStopSheet: View {
     @State private var useDepartureTime = false
     @State private var departureTime = Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: Date()) ?? Date()
 
+    // Only require a name — location is optional for planning
     private var isValid: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        (latitude != 0 || longitude != 0)
+        !name.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private var hasLocation: Bool {
+        latitude != 0 || longitude != 0
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    TextField("Stop Name", text: $name)
-                    CategoryPicker(selection: $category)
-                } header: {
-                    Text("Details")
-                }
-
-                Section {
-                    LocationSearchView(
-                        selectedName: $locationName,
-                        selectedLatitude: $latitude,
-                        selectedLongitude: $longitude
-                    )
-                    .listRowInsets(EdgeInsets())
-                } header: {
-                    Text("Location")
-                }
-
-                Section {
-                    Toggle("Set Arrival Time", isOn: $useArrivalTime)
-                    if useArrivalTime {
-                        DatePicker("Arrival", selection: $arrivalTime, displayedComponents: .hourAndMinute)
-                    }
-                    Toggle("Set Departure Time", isOn: $useDepartureTime)
-                    if useDepartureTime {
-                        DatePicker("Departure", selection: $departureTime, displayedComponents: .hourAndMinute)
-                    }
-                } header: {
-                    Text("Times")
-                }
-
-                Section {
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(2...4)
-                } header: {
-                    Text("Notes")
-                }
+                detailsSection
+                locationSection
+                timesSection
+                notesSection
             }
             .navigationTitle("Add Stop")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                    Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add Stop") {
-                        addStop()
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(!isValid)
+                    Button("Add Stop") { addStop() }
+                        .fontWeight(.semibold)
+                        .disabled(!isValid)
                 }
             }
             .onChange(of: locationName) { _, newValue in
-                if name.isEmpty || name == locationName {
+                if name.isEmpty {
                     name = newValue
+                }
+            }
+        }
+    }
+
+    // MARK: - Sections
+
+    private var detailsSection: some View {
+        Section {
+            TextField("Stop Name (required)", text: $name)
+            CategoryPicker(selection: $category)
+        } header: {
+            Text("Details")
+        }
+    }
+
+    private var locationSection: some View {
+        Section {
+            if hasLocation {
+                locationSelectedRow
+            }
+            useCurrentLocationButton
+            LocationSearchView(
+                selectedName: $locationName,
+                selectedLatitude: $latitude,
+                selectedLongitude: $longitude
+            )
+            .listRowInsets(EdgeInsets())
+        } header: {
+            Text("Location")
+        } footer: {
+            Text("Search for a place, use your current location, or skip — you can add a location later.")
+                .font(.caption2)
+        }
+    }
+
+    private var locationSelectedRow: some View {
+        HStack {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+            Text(locationName.isEmpty ? String(format: "%.4f, %.4f", latitude, longitude) : locationName)
+                .font(.subheadline)
+            Spacer()
+            Button("Clear") {
+                latitude = 0
+                longitude = 0
+                locationName = ""
+            }
+            .font(.caption)
+            .foregroundColor(.red)
+        }
+    }
+
+    @ViewBuilder
+    private var useCurrentLocationButton: some View {
+        if let locMgr = locationManager {
+            Button {
+                useCurrentLocation(locMgr)
+            } label: {
+                HStack {
+                    Image(systemName: "location.fill")
+                        .foregroundColor(.blue)
+                    Text("Use Current Location")
+                        .foregroundColor(.blue)
+                    Spacer()
+                    if !locMgr.isAuthorized {
+                        Text("Tap to enable")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private var timesSection: some View {
+        Section {
+            Toggle("Set Arrival Time", isOn: $useArrivalTime)
+            if useArrivalTime {
+                DatePicker("Arrival", selection: $arrivalTime, displayedComponents: .hourAndMinute)
+            }
+            Toggle("Set Departure Time", isOn: $useDepartureTime)
+            if useDepartureTime {
+                DatePicker("Departure", selection: $departureTime, displayedComponents: .hourAndMinute)
+            }
+        } header: {
+            Text("Times")
+        }
+    }
+
+    private var notesSection: some View {
+        Section {
+            TextField("Notes", text: $notes, axis: .vertical)
+                .lineLimit(2...4)
+        } header: {
+            Text("Notes")
+        }
+    }
+
+    // MARK: - Actions
+
+    private func useCurrentLocation(_ locMgr: LocationManager) {
+        if !locMgr.isAuthorized {
+            locMgr.requestPermission()
+            return
+        }
+        locMgr.requestLocation()
+        if let loc = locMgr.currentLocation {
+            latitude = loc.coordinate.latitude
+            longitude = loc.coordinate.longitude
+            // Reverse geocode for a name
+            let geocoder = CLGeocoder()
+            let clLocation = CLLocation(latitude: latitude, longitude: longitude)
+            geocoder.reverseGeocodeLocation(clLocation) { placemarks, _ in
+                if let place = placemarks?.first {
+                    let placeName = place.name ?? place.locality ?? "Current Location"
+                    locationName = placeName
                 }
             }
         }

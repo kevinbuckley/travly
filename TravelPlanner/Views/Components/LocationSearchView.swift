@@ -19,102 +19,185 @@ struct LocationSearchView: View {
     @State private var searchResults: [LocationSearchResult] = []
     @State private var isSearching = false
     @State private var cameraPosition: MapCameraPosition = .automatic
+    @State private var searchTask: Task<Void, Never>?
+    @State private var hasSelected = false
+
+    private var hasLocation: Bool {
+        selectedLatitude != 0 || selectedLongitude != 0
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Search bar
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search for a place...", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .autocorrectionDisabled()
-                    .onSubmit {
-                        performSearch()
-                    }
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                        searchResults = []
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
+            searchBar
+            if hasSelected && hasLocation {
+                selectedLocationBanner
             }
-            .padding(10)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .padding(.horizontal)
-            .padding(.top, 8)
-
-            if !searchResults.isEmpty {
-                // Results list
-                List(searchResults) { result in
-                    Button {
-                        selectResult(result)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(result.name)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.primary)
-                            if !result.subtitle.isEmpty {
-                                Text(result.subtitle)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-                .listStyle(.plain)
-                .frame(maxHeight: 180)
+            if !searchResults.isEmpty && !hasSelected {
+                resultsList
             }
-
-            // Map preview
-            Map(position: $cameraPosition) {
-                if selectedLatitude != 0 || selectedLongitude != 0 {
-                    Marker(selectedName.isEmpty ? "Selected" : selectedName,
-                           coordinate: CLLocationCoordinate2D(
-                               latitude: selectedLatitude,
-                               longitude: selectedLongitude
-                           ))
-                }
-            }
-            .frame(height: 180)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-
-            if !selectedName.isEmpty {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Text(selectedName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.bottom, 4)
-            }
+            mapPreview
         }
     }
 
-    private func performSearch() {
-        guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        isSearching = true
+    // MARK: - Search Bar
 
+    private var searchBar: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Type a place name...", text: $searchText)
+                .textFieldStyle(.plain)
+                .autocorrectionDisabled()
+                .onChange(of: searchText) { _, newValue in
+                    hasSelected = false
+                    debounceSearch(query: newValue)
+                }
+            searchBarTrailing
+        }
+        .padding(10)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal)
+        .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private var searchBarTrailing: some View {
+        if isSearching {
+            ProgressView()
+                .controlSize(.small)
+        } else if !searchText.isEmpty {
+            Button {
+                clearSearch()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Selected Location Banner
+
+    private var selectedLocationBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(selectedName)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Text(String(format: "%.4f, %.4f", selectedLatitude, selectedLongitude))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Button {
+                clearSearch()
+            } label: {
+                Text("Change")
+                    .font(.caption)
+                    .foregroundColor(.blue)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(Color.green.opacity(0.08))
+    }
+
+    // MARK: - Results List
+
+    private var resultsList: some View {
+        VStack(spacing: 0) {
+            ForEach(searchResults) { result in
+                resultRow(result)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.top, 4)
+    }
+
+    private func resultRow(_ result: LocationSearchResult) -> some View {
+        Button {
+            selectResult(result)
+        } label: {
+            resultRowLabel(result)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func resultRowLabel(_ result: LocationSearchResult) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "mappin.circle.fill")
+                .foregroundColor(.red)
+                .font(.title3)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(result.name)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                if !result.subtitle.isEmpty {
+                    Text(result.subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - Map Preview
+
+    private var mapPreview: some View {
+        Map(position: $cameraPosition) {
+            if hasLocation {
+                Marker(
+                    selectedName.isEmpty ? "Selected" : selectedName,
+                    coordinate: CLLocationCoordinate2D(
+                        latitude: selectedLatitude,
+                        longitude: selectedLongitude
+                    )
+                )
+            }
+        }
+        .frame(height: 160)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Search Logic
+
+    private func debounceSearch(query: String) {
+        searchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard trimmed.count >= 2 else {
+            searchResults = []
+            return
+        }
+        searchTask = Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            await performSearch(query: trimmed)
+        }
+    }
+
+    @MainActor
+    private func performSearch(query: String) async {
+        isSearching = true
         let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = searchText
+        request.naturalLanguageQuery = query
 
         let search = MKLocalSearch(request: request)
-        search.start { response, error in
-            isSearching = false
-            guard let response = response else {
-                searchResults = []
-                return
-            }
-            searchResults = response.mapItems.prefix(8).map { item in
+        do {
+            let response = try await search.start()
+            guard !Task.isCancelled else { return }
+            searchResults = response.mapItems.prefix(6).map { item in
                 LocationSearchResult(
                     name: item.name ?? "Unknown",
                     subtitle: item.placemark.title ?? "",
@@ -122,20 +205,34 @@ struct LocationSearchView: View {
                     longitude: item.placemark.coordinate.longitude
                 )
             }
+        } catch {
+            searchResults = []
         }
+        isSearching = false
     }
 
     private func selectResult(_ result: LocationSearchResult) {
         selectedName = result.name
         selectedLatitude = result.latitude
         selectedLongitude = result.longitude
-        searchResults = []
         searchText = result.name
+        searchResults = []
+        hasSelected = true
 
         let coordinate = CLLocationCoordinate2D(latitude: result.latitude, longitude: result.longitude)
         cameraPosition = .region(MKCoordinateRegion(
             center: coordinate,
             span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
         ))
+    }
+
+    private func clearSearch() {
+        searchText = ""
+        searchResults = []
+        selectedName = ""
+        selectedLatitude = 0
+        selectedLongitude = 0
+        hasSelected = false
+        cameraPosition = .automatic
     }
 }
