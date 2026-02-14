@@ -8,17 +8,17 @@ struct ContentView: View {
     var body: some View {
         TabView {
             NavigationStack {
-                TripListView()
-            }
-            .tabItem {
-                Label("Trips", systemImage: "list.bullet")
-            }
-
-            NavigationStack {
                 TripMapView()
             }
             .tabItem {
                 Label("Map", systemImage: "map")
+            }
+
+            NavigationStack {
+                TripListView()
+            }
+            .tabItem {
+                Label("Trips", systemImage: "list.bullet")
             }
 
             NavigationStack {

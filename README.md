@@ -5,6 +5,8 @@ An iOS travel planning app that spans the full trip lifecycle: **Plan → Experi
 Plan dozens of future trips with detailed itineraries, use the app while traveling to track your journey, and automatically match photos from your camera roll to locations using GPS metadata.
 
 <p align="center">
+  <img src="Screenshots/map-first.png" width="300" alt="Map View" />
+  &nbsp;&nbsp;
   <img src="Screenshots/trip-list.png" width="300" alt="Trip List View" />
 </p>
 
