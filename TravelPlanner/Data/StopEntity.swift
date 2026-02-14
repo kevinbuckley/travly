@@ -21,6 +21,9 @@ final class StopEntity {
 
     var day: DayEntity?
 
+    @Relationship(deleteRule: .cascade, inverse: \CommentEntity.stop)
+    var comments: [CommentEntity]
+
     // MARK: Computed Properties
 
     var category: StopCategory {
@@ -53,5 +56,6 @@ final class StopEntity {
         self.notes = notes
         self.isVisited = isVisited
         self.visitedAt = visitedAt
+        self.comments = []
     }
 }

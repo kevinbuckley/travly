@@ -9,6 +9,7 @@ struct StopDetailView: View {
     let stop: StopEntity
 
     @State private var showingEditStop = false
+    @State private var newCommentText = ""
 
     private var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
@@ -81,6 +82,9 @@ struct StopDetailView: View {
                     Text("Notes")
                 }
             }
+
+            // Comments
+            commentsSection
 
             // Get Directions
             Section {
@@ -177,6 +181,82 @@ struct StopDetailView: View {
     private func toggleVisitedStatus() {
         stop.isVisited.toggle()
         stop.visitedAt = stop.isVisited ? Date() : nil
+        try? modelContext.save()
+    }
+
+    // MARK: - Comments
+
+    private var sortedComments: [CommentEntity] {
+        stop.comments.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private var commentsSection: some View {
+        Section {
+            addCommentRow
+            ForEach(sortedComments) { comment in
+                commentRow(comment)
+            }
+            .onDelete { offsets in
+                deleteComments(at: offsets)
+            }
+        } header: {
+            HStack {
+                Text("Comments")
+                Spacer()
+                Text("\(stop.comments.count)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private var addCommentRow: some View {
+        HStack(spacing: 10) {
+            TextField("Add a comment...", text: $newCommentText, axis: .vertical)
+                .lineLimit(1...4)
+            Button {
+                addComment()
+            } label: {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(newCommentText.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .blue)
+            }
+            .disabled(newCommentText.trimmingCharacters(in: .whitespaces).isEmpty)
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func commentRow(_ comment: CommentEntity) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(comment.text)
+                .font(.body)
+            Text(comment.createdAt, style: .relative)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            + Text(" ago")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func addComment() {
+        let trimmed = newCommentText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let comment = CommentEntity(text: trimmed)
+        comment.stop = stop
+        stop.comments.append(comment)
+        modelContext.insert(comment)
+        try? modelContext.save()
+        newCommentText = ""
+    }
+
+    private func deleteComments(at offsets: IndexSet) {
+        let comments = sortedComments
+        for index in offsets {
+            let comment = comments[index]
+            modelContext.delete(comment)
+        }
         try? modelContext.save()
     }
 

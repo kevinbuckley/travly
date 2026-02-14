@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0348AEF70247FFAFBE0CFF74 /* CommentEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDD43006BFD0388832B236DD /* CommentEntity.swift */; };
 		0CACAFF3D7232F06D4D8CEC2 /* StopRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CA7715DC1DB2186016B507 /* StopRowView.swift */; };
 		1736A441DE0ED766793702A6 /* TravelPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23DEBB8E9A15261BD87963A7 /* TravelPlannerTests.swift */; };
 		17BD5E09932D36452048DAE6 /* CategoryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C64FEC3C5B11920AB5EE6D7E /* CategoryPicker.swift */; };
@@ -72,6 +73,7 @@
 		D56ADA02E68B54BC5041160E /* TripListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripListView.swift; sourceTree = "<group>"; };
 		D58949B7BC97E2244DC3CF26 /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
 		D8F2849479DB63FD37596436 /* ActiveTripDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveTripDashboard.swift; sourceTree = "<group>"; };
+		DDD43006BFD0388832B236DD /* CommentEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentEntity.swift; sourceTree = "<group>"; };
 		E6C1E4350AB19588CC1E3C49 /* StopEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopEntity.swift; sourceTree = "<group>"; };
 		F1A858F91BF523EFC9CEA692 /* TripRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripRowView.swift; sourceTree = "<group>"; };
 		F9F787BEAC69AAD8B9F777B6 /* DayEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayEntity.swift; sourceTree = "<group>"; };
@@ -160,6 +162,7 @@
 		A73336239FEE60EF6DA47FB1 /* Data */ = {
 			isa = PBXGroup;
 			children = (
+				DDD43006BFD0388832B236DD /* CommentEntity.swift */,
 				D58949B7BC97E2244DC3CF26 /* DataManager.swift */,
 				F9F787BEAC69AAD8B9F777B6 /* DayEntity.swift */,
 				E6C1E4350AB19588CC1E3C49 /* StopEntity.swift */,
@@ -301,6 +304,7 @@
 				5CC866EAA5149109E23D90C7 /* AddStopSheet.swift in Sources */,
 				6A0EEDD72374B06A75F84979 /* AddTripSheet.swift in Sources */,
 				17BD5E09932D36452048DAE6 /* CategoryPicker.swift in Sources */,
+				0348AEF70247FFAFBE0CFF74 /* CommentEntity.swift in Sources */,
 				53E149C149DB7D171850A28A /* ContentView.swift in Sources */,
 				33CB1167C384D8E63FB53D29 /* DataManager.swift in Sources */,
 				3E9541E627528F595F1CF1AE /* DayEntity.swift in Sources */,
