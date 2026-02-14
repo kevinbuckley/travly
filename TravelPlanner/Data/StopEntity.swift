@@ -1,0 +1,51 @@
+import SwiftData
+import Foundation
+import TripCore
+
+@Model
+final class StopEntity {
+
+    // MARK: Stored Properties
+
+    var id: UUID
+    var name: String
+    var latitude: Double
+    var longitude: Double
+    var arrivalTime: Date?
+    var departureTime: Date?
+    var categoryRaw: String
+    var notes: String
+    var sortOrder: Int
+
+    var day: DayEntity?
+
+    // MARK: Computed Properties
+
+    var category: StopCategory {
+        get { StopCategory(rawValue: categoryRaw) ?? .other }
+        set { categoryRaw = newValue.rawValue }
+    }
+
+    // MARK: Initializer
+
+    init(
+        name: String,
+        latitude: Double,
+        longitude: Double,
+        category: StopCategory = .other,
+        arrivalTime: Date? = nil,
+        departureTime: Date? = nil,
+        sortOrder: Int = 0,
+        notes: String = ""
+    ) {
+        self.id = UUID()
+        self.name = name
+        self.latitude = latitude
+        self.longitude = longitude
+        self.arrivalTime = arrivalTime
+        self.departureTime = departureTime
+        self.categoryRaw = category.rawValue
+        self.sortOrder = sortOrder
+        self.notes = notes
+    }
+}

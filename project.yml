@@ -1,0 +1,38 @@
+name: TravelPlanner
+options:
+  bundleIdPrefix: com.travelplanner
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "26.2"
+packages:
+  TripCore:
+    path: Packages/TripCore
+targets:
+  TravelPlanner:
+    type: application
+    platform: iOS
+    sources:
+      - TravelPlanner
+    dependencies:
+      - package: TripCore
+    settings:
+      base:
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        SWIFT_STRICT_CONCURRENCY: complete
+        PRODUCT_BUNDLE_IDENTIFIER: com.travelplanner.app
+        GENERATE_INFOPLIST_FILE: YES
+  TravelPlannerTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - TravelPlannerTests
+    dependencies:
+      - target: TravelPlanner
+      - package: TripCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.travelplanner.tests
+        GENERATE_INFOPLIST_FILE: YES
