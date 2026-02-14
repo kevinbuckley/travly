@@ -11,6 +11,7 @@ struct TripDetailView: View {
     @State private var showingEditTrip = false
     @State private var showingAddStop = false
     @State private var selectedDayForStop: DayEntity?
+    @State private var selectedDayForAI: DayEntity?
     @State private var showingStartConfirmation = false
     @State private var showingCompleteConfirmation = false
 
@@ -57,6 +58,9 @@ struct TripDetailView: View {
         }
         .sheet(item: $selectedDayForStop) { day in
             AddStopSheet(day: day)
+        }
+        .sheet(item: $selectedDayForAI) { day in
+            aiSuggestSheet(day: day)
         }
         .alert("Start Trip?", isPresented: $showingStartConfirmation) {
             Button("Start", role: .none) {
@@ -185,12 +189,18 @@ struct TripDetailView: View {
                 moveStops(in: day, from: source, to: destination)
             }
 
-            Button {
-                selectedDayForStop = day
-            } label: {
-                Label("Add Stop", systemImage: "plus.circle")
-                    .font(.subheadline)
-                    .foregroundStyle(.blue)
+            HStack {
+                Button {
+                    selectedDayForStop = day
+                } label: {
+                    Label("Add Stop", systemImage: "plus.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(.blue)
+                }
+
+                Spacer()
+
+                aiSuggestButton(day: day)
             }
         } header: {
             HStack {
@@ -216,5 +226,35 @@ struct TripDetailView: View {
     private func moveStops(in day: DayEntity, from source: IndexSet, to destination: Int) {
         let manager = DataManager(modelContext: modelContext)
         manager.reorderStops(in: day, from: source, to: destination)
+    }
+
+    // MARK: - AI Suggestions
+
+    @ViewBuilder
+    private func aiSuggestButton(day: DayEntity) -> some View {
+        if #available(iOS 26, *) {
+            Button {
+                selectedDayForAI = day
+            } label: {
+                Label("Suggest", systemImage: "sparkles")
+                    .font(.subheadline)
+                    .foregroundStyle(.purple)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func aiSuggestSheet(day: DayEntity) -> some View {
+        #if canImport(FoundationModels)
+        if #available(iOS 26, *) {
+            SuggestStopsSheet(
+                day: day,
+                destination: trip.destination,
+                totalDays: trip.durationInDays
+            )
+        }
+        #else
+        Text("Apple Intelligence requires iOS 26")
+        #endif
     }
 }

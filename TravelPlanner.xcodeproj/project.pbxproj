@@ -19,6 +19,7 @@
 		51845549A4B02772C554BF99 /* TimelineStopRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92719B6698BB8E170451D3D7 /* TimelineStopRow.swift */; };
 		52FC1EFCD0D9A03A74B61A24 /* EditTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D426D1DC6E212A8B6785A9BF /* EditTripSheet.swift */; };
 		53E149C149DB7D171850A28A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC66224FEF6FBD6F349E3513 /* ContentView.swift */; };
+		55F2082396196FB204EDE871 /* AITripPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318C344DD4598AA39B7DA914 /* AITripPlanner.swift */; };
 		5CC866EAA5149109E23D90C7 /* AddStopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC113161B65E082DBD39DA6A /* AddStopSheet.swift */; };
 		643937882AD91BEB1746C6B9 /* TripDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F24FCC148570A217B37FAD /* TripDetailView.swift */; };
 		6A0EEDD72374B06A75F84979 /* AddTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929AA85012BFDF196233BCE5 /* AddTripSheet.swift */; };
@@ -36,6 +37,7 @@
 		EE908EB564515B9843770A5A /* TripCore in Frameworks */ = {isa = PBXBuildFile; productRef = 372D538F3E49A295636019DF /* TripCore */; };
 		F1031E74318D99FA8B0AF043 /* EditStopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D459EA563BD530DA9AB7F379 /* EditStopSheet.swift */; };
 		F2A5DB79846A72FF7D73E85E /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B746D89D9F64B66F230DFC75 /* LocationManager.swift */; };
+		FC04DF3FB117A180F7FFCC44 /* SuggestStopsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 297F8BE08BF8B37312FBA0B7 /* SuggestStopsSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +53,8 @@
 /* Begin PBXFileReference section */
 		216E31A0833F49B143037B54 /* TravelPlanner.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TravelPlanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		23DEBB8E9A15261BD87963A7 /* TravelPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlannerTests.swift; sourceTree = "<group>"; };
+		297F8BE08BF8B37312FBA0B7 /* SuggestStopsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestStopsSheet.swift; sourceTree = "<group>"; };
+		318C344DD4598AA39B7DA914 /* AITripPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITripPlanner.swift; sourceTree = "<group>"; };
 		33599FA2BA90D34A7790666F /* QuickAddStopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddStopSheet.swift; sourceTree = "<group>"; };
 		384781C8DEEB3A75BA3C53EB /* TravelPlannerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TravelPlannerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C657E3039B5D556EB074A2C /* TripEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripEntity.swift; sourceTree = "<group>"; };
@@ -122,6 +126,7 @@
 		43CE70E4857F77D6ADBFBBA7 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				318C344DD4598AA39B7DA914 /* AITripPlanner.swift */,
 				B746D89D9F64B66F230DFC75 /* LocationManager.swift */,
 			);
 			path = Services;
@@ -151,6 +156,7 @@
 				33599FA2BA90D34A7790666F /* QuickAddStopSheet.swift */,
 				3F5C9ACBDBEA55CB86383E06 /* SettingsView.swift */,
 				FD502E2EC224340FDBDF8A5D /* StopDetailView.swift */,
+				297F8BE08BF8B37312FBA0B7 /* SuggestStopsSheet.swift */,
 				59F24FCC148570A217B37FAD /* TripDetailView.swift */,
 				D56ADA02E68B54BC5041160E /* TripListView.swift */,
 				B9187D01CC9CAFBC36BA23F5 /* TripMapView.swift */,
@@ -300,6 +306,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				55F2082396196FB204EDE871 /* AITripPlanner.swift in Sources */,
 				7106A8CAC582FE714E085574 /* ActiveTripDashboard.swift in Sources */,
 				5CC866EAA5149109E23D90C7 /* AddStopSheet.swift in Sources */,
 				6A0EEDD72374B06A75F84979 /* AddTripSheet.swift in Sources */,
@@ -318,6 +325,7 @@
 				D6DDDECA124711B3F1943131 /* StopDetailView.swift in Sources */,
 				A164409B7376015E3E324755 /* StopEntity.swift in Sources */,
 				0CACAFF3D7232F06D4D8CEC2 /* StopRowView.swift in Sources */,
+				FC04DF3FB117A180F7FFCC44 /* SuggestStopsSheet.swift in Sources */,
 				51845549A4B02772C554BF99 /* TimelineStopRow.swift in Sources */,
 				41544777BBA083F8202FFF60 /* TravelPlannerApp.swift in Sources */,
 				643937882AD91BEB1746C6B9 /* TripDetailView.swift in Sources */,
