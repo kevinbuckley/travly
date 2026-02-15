@@ -16,8 +16,6 @@ struct TripDetailView: View {
     @State private var showingCompleteConfirmation = false
     @State private var showingAddBooking = false
     @State private var travelTimeService = TravelTimeService()
-    @State private var showingShareSheet = false
-    @State private var pdfData: Data?
 
     private var sortedDays: [DayEntity] {
         trip.days.sorted { $0.dayNumber < $1.dayNumber }
@@ -83,11 +81,6 @@ struct TripDetailView: View {
         }
         .sheet(isPresented: $showingAddBooking) {
             AddBookingSheet(trip: trip)
-        }
-        .sheet(isPresented: $showingShareSheet) {
-            if let pdfData {
-                ShareSheetView(items: [pdfData], filename: "\(trip.name) Itinerary.pdf")
-            }
         }
         .alert("Start Trip?", isPresented: $showingStartConfirmation) {
             Button("Start", role: .none) {
@@ -396,8 +389,8 @@ struct TripDetailView: View {
     // MARK: - Share
 
     private func shareTripPDF() {
-        pdfData = TripPDFGenerator.generatePDF(for: trip)
-        showingShareSheet = true
+        let data = TripPDFGenerator.generatePDF(for: trip)
+        ShareSheet.share(pdfData: data, filename: "\(trip.name) Itinerary.pdf")
     }
 
     // MARK: - AI Suggestions
