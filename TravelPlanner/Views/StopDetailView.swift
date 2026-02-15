@@ -10,6 +10,7 @@ struct StopDetailView: View {
 
     @State private var showingEditStop = false
     @State private var showingNearbyAI = false
+    @State private var showingLocateAI = false
     @State private var newCommentText = ""
 
     private var coordinate: CLLocationCoordinate2D {
@@ -32,14 +33,18 @@ struct StopDetailView: View {
 
     var body: some View {
         List {
-            // Map section
-            Section {
-                Map(initialPosition: cameraPosition) {
-                    Marker(stop.name, coordinate: coordinate)
-                        .tint(markerColor)
+            // Map section or Locate button
+            if hasLocation {
+                Section {
+                    Map(initialPosition: cameraPosition) {
+                        Marker(stop.name, coordinate: coordinate)
+                            .tint(markerColor)
+                    }
+                    .frame(height: 220)
+                    .listRowInsets(EdgeInsets())
                 }
-                .frame(height: 220)
-                .listRowInsets(EdgeInsets())
+            } else {
+                locateSection
             }
 
             // Visited section
@@ -67,9 +72,6 @@ struct StopDetailView: View {
                         LabeledContent("Departure", value: timeFormatter.string(from: departure))
                     }
                 }
-
-                LabeledContent("Latitude", value: String(format: "%.4f", stop.latitude))
-                LabeledContent("Longitude", value: String(format: "%.4f", stop.longitude))
             } header: {
                 Text("Details")
             }
@@ -133,6 +135,9 @@ struct StopDetailView: View {
         }
         .sheet(isPresented: $showingNearbyAI) {
             nearbyAISheet
+        }
+        .sheet(isPresented: $showingLocateAI) {
+            locateAISheet
         }
     }
 
@@ -267,11 +272,55 @@ struct StopDetailView: View {
         try? modelContext.save()
     }
 
-    // MARK: - Nearby AI
+    // MARK: - Locate AI
 
     private var hasLocation: Bool {
         stop.latitude != 0 || stop.longitude != 0
     }
+
+    private var locateSection: some View {
+        Section {
+            VStack(spacing: 12) {
+                Image(systemName: "mappin.slash")
+                    .font(.title)
+                    .foregroundStyle(.secondary)
+                Text("No location set")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                locateButton
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        }
+    }
+
+    @ViewBuilder
+    private var locateButton: some View {
+        if #available(iOS 26, *) {
+            Button {
+                showingLocateAI = true
+            } label: {
+                Label("Locate with AI", systemImage: "sparkles")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.purple)
+        }
+    }
+
+    @ViewBuilder
+    private var locateAISheet: some View {
+        #if canImport(FoundationModels)
+        if #available(iOS 26, *) {
+            LocateStopSheet(stop: stop)
+        }
+        #else
+        Text("Apple Intelligence requires iOS 26")
+        #endif
+    }
+
+    // MARK: - Nearby AI
 
     @ViewBuilder
     private var nearbyAISection: some View {

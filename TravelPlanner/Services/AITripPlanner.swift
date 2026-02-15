@@ -8,6 +8,22 @@ import FoundationModels
 
 @available(iOS 26, *)
 @Generable
+struct LocatedPlace {
+    @Guide(description: "The full name of the place")
+    var name: String
+
+    @Guide(description: "The latitude coordinate of the place")
+    var latitude: Double
+
+    @Guide(description: "The longitude coordinate of the place")
+    var longitude: Double
+
+    @Guide(description: "A short address or neighborhood description")
+    var address: String
+}
+
+@available(iOS 26, *)
+@Generable
 struct SuggestedStop {
     @Guide(description: "The name of the place or attraction to visit")
     var name: String
@@ -237,6 +253,49 @@ final class AITripPlanner {
         }
 
         isGenerating = false
+    }
+
+    /// Locate a place by name using AI to find its coordinates.
+    var locatedPlace: LocatedPlace?
+    var isLocating = false
+
+    func locatePlace(name: String, destination: String) async {
+        guard isAvailable else {
+            errorMessage = "Apple Intelligence is not available on this device."
+            return
+        }
+
+        isLocating = true
+        locatedPlace = nil
+        errorMessage = nil
+
+        let prompt = """
+        Find the location of "\(name)" in or near \(destination).
+
+        Provide the exact latitude and longitude coordinates and a short \
+        address or neighborhood description. If this is a well-known place, \
+        use its actual coordinates. Be as accurate as possible.
+        """
+
+        do {
+            let locateSession = LanguageModelSession {
+                """
+                You are a geocoding assistant. You provide accurate latitude and \
+                longitude coordinates for real places. Always return real coordinates \
+                that would place a pin on the correct location on a map.
+                """
+            }
+
+            let result = try await locateSession.respond(
+                to: prompt,
+                generating: LocatedPlace.self
+            )
+            locatedPlace = result.content
+        } catch {
+            errorMessage = "Could not locate this place. Please try again."
+        }
+
+        isLocating = false
     }
 
     /// Map a category string from the AI to a StopCategory enum.
