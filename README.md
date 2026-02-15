@@ -1,14 +1,8 @@
-# TravelPlanner
+# Travly
 
 An iOS travel planning app that spans the full trip lifecycle: **Plan → Experience → Remember**.
 
 Plan dozens of future trips with detailed itineraries, use the app while traveling to track your journey, and automatically match photos from your camera roll to locations using GPS metadata.
-
-<p align="center">
-  <img src="Screenshots/map-first.png" width="300" alt="Map View" />
-  &nbsp;&nbsp;
-  <img src="Screenshots/trip-list.png" width="300" alt="Trip List View" />
-</p>
 
 ## Features
 
@@ -25,17 +19,25 @@ Plan dozens of future trips with detailed itineraries, use the app while traveli
 - Set arrival and departure times for each stop
 - Add notes to trips, days, and individual stops
 
+### Bookings
+- Track flights, hotels, and car rentals with confirmation codes
+- All booking details in one place
+
 ### Map View
 - Full-screen map showing all stops for any trip
 - Color-coded pins by stop category
 - Quick trip switcher to jump between trips
-- Fit-all button to see your entire itinerary at a glance
 
-### Photo Matching (Coming Soon)
-- Automatically scan your camera roll after a trip
+### Weather & Travel Times
+- Weather forecasts for your destination
+- Driving and walking time estimates between stops
+
+### Photo Matching
+- Automatically scan your camera roll
 - Match photos to stops using GPS coordinates and timestamps
-- High/Medium/Low confidence matching with manual override
-- Build a visual journal of your trip
+
+### Share
+- Export trip as a clean PDF itinerary
 
 ## Tech Stack
 
@@ -51,17 +53,17 @@ Plan dozens of future trips with detailed itineraries, use the app while traveli
 ## Project Structure
 
 ```
-TravelPlanner/
+Travly/
 ├── Packages/TripCore/          ← Pure Swift package (models, services, tests)
 │   ├── Sources/TripCore/
 │   │   ├── Models/             ← Trip, Day, Stop, MatchedPhoto, Coordinate
 │   │   └── Services/           ← PhotoMatcher, GeoUtils, ItineraryEngine
-│   └── Tests/TripCoreTests/    ← 23 unit tests
-├── TravelPlanner/              ← SwiftUI app
+│   └── Tests/TripCoreTests/    ← Unit tests
+├── Travly/                     ← SwiftUI app
 │   ├── Data/                   ← SwiftData entities + DataManager
 │   ├── Views/                  ← All screens
 │   └── Views/Components/       ← Reusable UI components
-├── TravelPlannerTests/         ← App-level tests
+├── TravlyTests/                ← App-level tests
 └── Scripts/                    ← CLI validation scripts
 ```
 
@@ -77,31 +79,12 @@ Requires Xcode 26+ and macOS 15+.
 ./Scripts/test-logic.sh
 
 # Build for simulator
-xcodebuild build -scheme TravelPlanner \
+xcodebuild build -scheme Travly \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -quiet
 
 # Regenerate Xcode project after changing project.yml
 xcodegen generate
 ```
-
-## Development Workflow
-
-The project is structured for a **Claude Code validation loop**:
-
-1. Business logic lives in `TripCore` Swift Package — tests run fast with `swift test`, no simulator needed
-2. `validate.sh` runs 4 automated steps: TripCore build → TripCore tests → App build → App tests
-3. Xcode output is filtered to just errors and test results for clean CI feedback
-
-## Roadmap
-
-- [ ] Photo library integration (PhotoKit)
-- [ ] Automatic photo-to-stop matching
-- [ ] CloudKit sync across devices
-- [ ] Trip sharing with travel companions
-- [ ] Budget and expense tracking
-- [ ] Packing lists
-- [ ] Export trip as PDF
-- [ ] Widgets and Live Activities
 
 ## License
 

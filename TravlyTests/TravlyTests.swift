@@ -3,7 +3,7 @@ import Foundation
 import TripCore
 import SwiftData
 
-@testable import TravelPlanner
+@testable import Travly
 
 @Test func tripEntityCanBeCreated() {
     let trip = TripEntity(

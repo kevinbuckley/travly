@@ -1,4 +1,4 @@
-name: TravelPlanner
+name: Travly
 options:
   bundleIdPrefix: com.kevinbuckley.travelplanner
   deploymentTarget:
@@ -8,11 +8,11 @@ packages:
   TripCore:
     path: Packages/TripCore
 targets:
-  TravelPlanner:
+  Travly:
     type: application
     platform: iOS
     sources:
-      - TravelPlanner
+      - Travly
     dependencies:
       - package: TripCore
     settings:
@@ -32,14 +32,14 @@ targets:
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Travly matches your photos to trip stops based on location and time."
         INFOPLIST_KEY_CFBundleShortVersionString: "1.0"
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "2"
-  TravelPlannerTests:
+        CURRENT_PROJECT_VERSION: "3"
+  TravlyTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - TravelPlannerTests
+      - TravlyTests
     dependencies:
-      - target: TravelPlanner
+      - target: Travly
       - package: TripCore
     settings:
       base:
