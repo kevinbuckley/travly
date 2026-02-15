@@ -72,8 +72,9 @@ https://kevinbuckley.github.io/travly/
 Result: Rated 4+ (all ages)
 
 ## Export Compliance
-Does this app use encryption? **No**
-(The app uses standard HTTPS for weather API calls, which is exempt under Apple's rules.)
+Does this app use encryption? **Yes**
+Does your app qualify for any of the exemptions provided in Category 5, Part 2 of the U.S. Export Administration Regulations? **Yes**
+(The app only uses HTTPS/TLS for network calls to the Open-Meteo weather API. This qualifies for the standard encryption exemption.)
 
 ## Screenshot Order
 1. "Plan Your Perfect Trip" — trip list

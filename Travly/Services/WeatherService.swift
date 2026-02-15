@@ -8,8 +8,8 @@ final class WeatherService {
     struct DayForecast: Identifiable {
         let id = UUID()
         let date: Date
-        let highTemp: Double  // Fahrenheit
-        let lowTemp: Double   // Fahrenheit
+        let highTemp: Double
+        let lowTemp: Double
         let conditionCode: Int  // WMO weather code
         let precipProbability: Int  // percentage
     }
@@ -18,6 +18,16 @@ final class WeatherService {
     private(set) var isLoading = false
     private(set) var errorMessage: String?
     private(set) var locationName: String = ""
+
+    /// Whether the device locale uses Fahrenheit (US, Cayman Islands, etc.)
+    var usesFahrenheit: Bool {
+        Locale.current.measurementSystem == .us
+    }
+
+    /// Formatted temperature string with the correct unit symbol.
+    func formatTemp(_ temp: Double) -> String {
+        "\(Int(round(temp)))°"
+    }
 
     /// Fetch weather for a destination string and date range.
     func fetchWeather(destination: String, startDate: Date, endDate: Date) async {
@@ -46,8 +56,9 @@ final class WeatherService {
             let start = formatter.string(from: startDate)
             let end = formatter.string(from: endDate)
 
-            // Use Open-Meteo free API
-            let urlString = "https://api.open-meteo.com/v1/forecast?latitude=\(lat)&longitude=\(lon)&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max&temperature_unit=fahrenheit&start_date=\(start)&end_date=\(end)&timezone=auto"
+            // Use Open-Meteo free API — respect device locale for temperature unit
+            let tempUnit = usesFahrenheit ? "fahrenheit" : "celsius"
+            let urlString = "https://api.open-meteo.com/v1/forecast?latitude=\(lat)&longitude=\(lon)&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max&temperature_unit=\(tempUnit)&start_date=\(start)&end_date=\(end)&timezone=auto"
 
             guard let url = URL(string: urlString) else {
                 errorMessage = "Invalid URL"

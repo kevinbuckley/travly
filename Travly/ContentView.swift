@@ -6,7 +6,13 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
-    /// Screenshot mode: pass `-screenshotTab trips` (or `map`, `settings`) as launch arg
+    @State private var selectedTab = 0
+    @State private var tripsNavPath = NavigationPath()
+    @Query(sort: \TripEntity.startDate, order: .reverse) private var allTrips: [TripEntity]
+
+    #if DEBUG
+    /// Screenshot mode: pass `-screenshotTab trips` (or `map`, `settings`, `tripdetail`) as launch arg.
+    /// Only available in debug builds for generating App Store screenshots.
     private var screenshotTab: String? {
         if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-screenshotTab"),
            idx + 1 < ProcessInfo.processInfo.arguments.count {
@@ -16,15 +22,15 @@ struct ContentView: View {
     }
 
     private var isScreenshotMode: Bool { screenshotTab != nil }
-
-    @State private var selectedTab = 0
-    @State private var tripsNavPath = NavigationPath()
-    @Query(sort: \TripEntity.startDate, order: .reverse) private var allTrips: [TripEntity]
+    #else
+    private var isScreenshotMode: Bool { false }
+    #endif
 
     var body: some View {
         if hasCompletedOnboarding || isScreenshotMode {
             mainTabView
                 .onAppear {
+                    #if DEBUG
                     if isScreenshotMode {
                         seedScreenshotDataIfNeeded()
                         switch screenshotTab {
@@ -33,7 +39,6 @@ struct ContentView: View {
                         case "settings": selectedTab = 2
                         case "tripdetail":
                             selectedTab = 1
-                            // Push to first trip after a short delay so data is loaded
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                 if let first = allTrips.first(where: { $0.status == .active }) ?? allTrips.first {
                                     tripsNavPath.append(first.id)
@@ -42,6 +47,7 @@ struct ContentView: View {
                         default: selectedTab = 1
                         }
                     }
+                    #endif
                 }
         } else {
             WelcomeView(hasCompletedOnboarding: $hasCompletedOnboarding)
@@ -82,6 +88,7 @@ struct ContentView: View {
         .tint(.blue)
     }
 
+    #if DEBUG
     private func seedScreenshotDataIfNeeded() {
         let descriptor = FetchDescriptor<TripEntity>()
         let count = (try? modelContext.fetchCount(descriptor)) ?? 0
@@ -90,4 +97,5 @@ struct ContentView: View {
             manager.loadSampleDataIfEmpty()
         }
     }
+    #endif
 }
