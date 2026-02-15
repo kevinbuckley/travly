@@ -21,11 +21,6 @@ struct TravelPlannerApp: App {
         WindowGroup {
             ContentView()
                 .environment(locationManager)
-                .onAppear {
-                    let context = modelContainer.mainContext
-                    let manager = DataManager(modelContext: context)
-                    manager.loadSampleDataIfEmpty()
-                }
         }
         .modelContainer(modelContainer)
     }

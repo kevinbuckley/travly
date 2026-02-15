@@ -8,6 +8,7 @@ struct TripListView: View {
     @Query(sort: \TripEntity.startDate, order: .reverse) private var allTrips: [TripEntity]
 
     @State private var showingAddTrip = false
+    @State private var tripToDelete: TripEntity?
 
     private var activeTrips: [TripEntity] {
         allTrips.filter { $0.status == .active }
@@ -45,6 +46,22 @@ struct TripListView: View {
         }
         .sheet(isPresented: $showingAddTrip) {
             AddTripSheet()
+        }
+        .alert("Delete Trip?", isPresented: Binding(
+            get: { tripToDelete != nil },
+            set: { if !$0 { tripToDelete = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let trip = tripToDelete {
+                    DataManager(modelContext: modelContext).deleteTrip(trip)
+                    tripToDelete = nil
+                }
+            }
+            Button("Cancel", role: .cancel) { tripToDelete = nil }
+        } message: {
+            if let trip = tripToDelete {
+                Text("Delete \"\(trip.name)\" and all its stops, bookings, and comments? This cannot be undone.")
+            }
         }
     }
 
@@ -90,7 +107,9 @@ struct TripListView: View {
                         }
                     }
                     .onDelete { offsets in
-                        deleteTrips(from: activeTrips, at: offsets)
+                        if let index = offsets.first {
+                            tripToDelete = activeTrips[index]
+                        }
                     }
                 } header: {
                     Label("Active", systemImage: "location.fill")
@@ -109,7 +128,9 @@ struct TripListView: View {
                         }
                     }
                     .onDelete { offsets in
-                        deleteTrips(from: combined, at: offsets)
+                        if let index = offsets.first {
+                            tripToDelete = combined[index]
+                        }
                     }
                 } header: {
                     Label("Upcoming", systemImage: "calendar")
@@ -127,7 +148,9 @@ struct TripListView: View {
                         }
                     }
                     .onDelete { offsets in
-                        deleteTrips(from: pastTrips, at: offsets)
+                        if let index = offsets.first {
+                            tripToDelete = pastTrips[index]
+                        }
                     }
                 } header: {
                     Label("Past", systemImage: "checkmark.circle")
@@ -140,12 +163,4 @@ struct TripListView: View {
         .listStyle(.insetGrouped)
     }
 
-    // MARK: - Actions
-
-    private func deleteTrips(from list: [TripEntity], at offsets: IndexSet) {
-        let manager = DataManager(modelContext: modelContext)
-        for index in offsets {
-            manager.deleteTrip(list[index])
-        }
-    }
 }
