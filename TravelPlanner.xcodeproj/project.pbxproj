@@ -31,6 +31,7 @@
 		84EF3F89E274C976EB1CAE41 /* PlanDayVibeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111C87BE6AF2E9082D49832A /* PlanDayVibeSheet.swift */; };
 		A164409B7376015E3E324755 /* StopEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C1E4350AB19588CC1E3C49 /* StopEntity.swift */; };
 		B641325CF3FAB88A994EAF54 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D23CB8ED03D8D00AAF086C1F /* StatusBadge.swift */; };
+		BA5A785A8B3AA6FDD12A47BB /* LocateStopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3855FA3296112AAC247AB289 /* LocateStopSheet.swift */; };
 		C2EBF318ED366F9035C01C62 /* TripMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9187D01CC9CAFBC36BA23F5 /* TripMapView.swift */; };
 		C58418283CD22F4E5C8B1993 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F5C9ACBDBEA55CB86383E06 /* SettingsView.swift */; };
 		D6DDDECA124711B3F1943131 /* StopDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD502E2EC224340FDBDF8A5D /* StopDetailView.swift */; };
@@ -60,6 +61,7 @@
 		318C344DD4598AA39B7DA914 /* AITripPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITripPlanner.swift; sourceTree = "<group>"; };
 		33599FA2BA90D34A7790666F /* QuickAddStopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddStopSheet.swift; sourceTree = "<group>"; };
 		384781C8DEEB3A75BA3C53EB /* TravelPlannerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TravelPlannerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3855FA3296112AAC247AB289 /* LocateStopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocateStopSheet.swift; sourceTree = "<group>"; };
 		3C657E3039B5D556EB074A2C /* TripEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripEntity.swift; sourceTree = "<group>"; };
 		3F5C9ACBDBEA55CB86383E06 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		59F24FCC148570A217B37FAD /* TripDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripDetailView.swift; sourceTree = "<group>"; };
@@ -157,6 +159,7 @@
 				929AA85012BFDF196233BCE5 /* AddTripSheet.swift */,
 				D459EA563BD530DA9AB7F379 /* EditStopSheet.swift */,
 				D426D1DC6E212A8B6785A9BF /* EditTripSheet.swift */,
+				3855FA3296112AAC247AB289 /* LocateStopSheet.swift */,
 				72BE2AB36D39D3AC9E199FDC /* NearbyAISuggestSheet.swift */,
 				111C87BE6AF2E9082D49832A /* PlanDayVibeSheet.swift */,
 				33599FA2BA90D34A7790666F /* QuickAddStopSheet.swift */,
@@ -323,6 +326,7 @@
 				3E9541E627528F595F1CF1AE /* DayEntity.swift in Sources */,
 				F1031E74318D99FA8B0AF043 /* EditStopSheet.swift in Sources */,
 				52FC1EFCD0D9A03A74B61A24 /* EditTripSheet.swift in Sources */,
+				BA5A785A8B3AA6FDD12A47BB /* LocateStopSheet.swift in Sources */,
 				F2A5DB79846A72FF7D73E85E /* LocationManager.swift in Sources */,
 				EB725655B3E37B237F119E3F /* LocationSearchView.swift in Sources */,
 				3E47E593AA72C188086BFA07 /* NearbyAISuggestSheet.swift in Sources */,
