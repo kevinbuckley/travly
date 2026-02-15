@@ -158,7 +158,7 @@ struct ActiveTripDashboard: View {
             }
             addStopButton
         }
-        .frame(maxHeight: UIScreen.main.bounds.height * 0.35)
+        .frame(maxHeight: 300)
     }
 
     private var itineraryHeader: some View {
