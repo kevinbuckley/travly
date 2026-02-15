@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct TravelPlannerApp: App {
+struct TravlyApp: App {
 
     let modelContainer: ModelContainer
     @State private var locationManager = LocationManager()

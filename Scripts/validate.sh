@@ -1,5 +1,5 @@
 #!/bin/bash
-# TravelPlanner Validation Script
+# Travly Validation Script
 # Claude Code runs this after every code change
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -12,7 +12,7 @@ green() { printf "\033[32m%s\033[0m\n" "$1"; }
 red() { printf "\033[31m%s\033[0m\n" "$1"; }
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo " TravelPlanner Validation"
+echo " Travly Validation"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
@@ -44,7 +44,7 @@ fi
 echo ""
 echo "▶ Step 3: App build (xcodebuild)"
 cd "$PROJECT_ROOT"
-APP_BUILD_OUT=$(xcodebuild build -scheme TravelPlanner -destination "$SIMDEVICE" -quiet 2>&1)
+APP_BUILD_OUT=$(xcodebuild build -scheme Travly -destination "$SIMDEVICE" -quiet 2>&1)
 APP_BUILD_EXIT=$?
 if [ $APP_BUILD_EXIT -eq 0 ]; then
     PASS=$((PASS + 1)); green "  ✓ App builds for simulator"
@@ -57,7 +57,7 @@ fi
 echo ""
 echo "▶ Step 4: App tests (xcodebuild test)"
 cd "$PROJECT_ROOT"
-APP_TEST_OUT=$(xcodebuild test -scheme TravelPlanner -destination "$SIMDEVICE" -only-testing:TravelPlannerTests -quiet 2>&1)
+APP_TEST_OUT=$(xcodebuild test -scheme Travly -destination "$SIMDEVICE" -only-testing:TravlyTests -quiet 2>&1)
 APP_TEST_EXIT=$?
 if [ $APP_TEST_EXIT -eq 0 ]; then
     PASS=$((PASS + 1)); green "  ✓ App tests passed"
