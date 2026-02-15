@@ -45,13 +45,13 @@ travel,planner,trip,itinerary,vacation,flight,hotel,booking,map,weather
 Welcome to Travly! Plan trips, organize day-by-day itineraries, track bookings, check weather forecasts, and share your plans as a PDF.
 
 ## Privacy Policy URL
-https://kevinbuckley.github.io/travelplanner/privacy.html
+https://kevinbuckley.github.io/travly/privacy.html
 
 ## Support URL
-https://kevinbuckley.github.io/travelplanner/support.html
+https://kevinbuckley.github.io/travly/support.html
 
 ## Marketing URL (optional)
-https://kevinbuckley.github.io/travelplanner/
+https://kevinbuckley.github.io/travly/
 
 ## Copyright
 2026 Kevin Buckley
