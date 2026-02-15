@@ -1,32 +1,39 @@
 import SwiftUI
 import UIKit
 
-/// A UIActivityViewController wrapper for sharing items (PDF data, text, etc.)
-struct ShareSheetView: UIViewControllerRepresentable {
+/// Helper to present UIActivityViewController from SwiftUI.
+/// UIActivityViewController cannot be wrapped in UIViewControllerRepresentable inside a .sheet().
+/// Instead, we present it directly on the root view controller.
+enum ShareSheet {
 
-    let items: [Any]
-    var filename: String = "document.pdf"
+    static func share(pdfData: Data, filename: String) {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        try? pdfData.write(to: tempURL)
 
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        // If the first item is Data, write to a temp file so it shares as a named PDF
-        var shareItems: [Any] = []
-
-        for item in items {
-            if let data = item as? Data {
-                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-                try? data.write(to: tempURL)
-                shareItems.append(tempURL)
-            } else {
-                shareItems.append(item)
-            }
-        }
-
-        let controller = UIActivityViewController(
-            activityItems: shareItems,
+        let activityVC = UIActivityViewController(
+            activityItems: [tempURL],
             applicationActivities: nil
         )
-        return controller
-    }
 
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+        // Find the top-most view controller to present from
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootVC = windowScene.windows.first?.rootViewController else {
+            return
+        }
+
+        // Walk up to the top presented controller
+        var topVC = rootVC
+        while let presented = topVC.presentedViewController {
+            topVC = presented
+        }
+
+        // iPad requires a popover source
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = topVC.view
+            popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: 0, width: 0, height: 0)
+            popover.permittedArrowDirections = .up
+        }
+
+        topVC.present(activityVC, animated: true)
+    }
 }
