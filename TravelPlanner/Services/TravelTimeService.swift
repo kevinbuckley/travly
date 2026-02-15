@@ -82,8 +82,15 @@ final class TravelTimeService {
                 )
             }
         } catch {
-            // On failure, remove loading state
-            estimates.removeValue(forKey: key)
+            // Mark as failed (not loading, no data)
+            estimates[key] = TravelEstimate(
+                fromStopID: fromStop.id,
+                toStopID: toStop.id,
+                drivingMinutes: nil,
+                walkingMinutes: nil,
+                distanceMeters: nil,
+                isLoading: false
+            )
         }
     }
 

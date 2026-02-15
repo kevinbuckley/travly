@@ -52,6 +52,7 @@ struct QuickAddStopSheet: View {
     private var locationStatusSection: some View {
         VStack(spacing: 12) {
             if didAdd, let name = resolvedName {
+                // Success state
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 48))
                     .foregroundColor(.green)
@@ -62,7 +63,41 @@ struct QuickAddStopSheet: View {
                 Text("Added to today's itinerary")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+            } else if locationManager.isDenied {
+                // Permission denied state
+                Image(systemName: "location.slash.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(.red)
+                Text("Location Access Denied")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                Text("Enable location access in Settings to use this feature.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
+            } else if let error = locationManager.locationError {
+                // Error state
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(.orange)
+                Text(error)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("Try Again") {
+                    locationManager.requestLocation()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
             } else {
+                // Loading state
                 ProgressView()
                     .controlSize(.large)
                 Text(isGeocoding ? "Finding place name..." : "Getting your location...")
@@ -79,6 +114,10 @@ struct QuickAddStopSheet: View {
     // MARK: - Helpers
 
     private func requestLocationIfNeeded() {
+        if locationManager.isDenied {
+            // Already denied — UI will show settings prompt
+            return
+        }
         if !locationManager.isAuthorized {
             locationManager.requestPermission()
         } else {
@@ -118,6 +157,10 @@ struct QuickAddStopSheet: View {
         stop.arrivalTime = Date()
         try? modelContext.save()
         didAdd = true
+
+        // Haptic feedback on success
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
 
         // Auto-dismiss after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {

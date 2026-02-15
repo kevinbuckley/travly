@@ -49,7 +49,12 @@ struct EditStopSheet: View {
                     }
                     Toggle("Set Departure Time", isOn: $useDepartureTime)
                     if useDepartureTime {
-                        DatePicker("Departure", selection: $departureTime, displayedComponents: .hourAndMinute)
+                        DatePicker(
+                            "Departure",
+                            selection: $departureTime,
+                            in: (useArrivalTime ? arrivalTime : .distantPast)...,
+                            displayedComponents: .hourAndMinute
+                        )
                     }
                 } header: {
                     Text("Times")

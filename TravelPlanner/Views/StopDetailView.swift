@@ -110,23 +110,9 @@ struct StopDetailView: View {
             // AI Nearby Suggestions
             nearbyAISection
 
-            // Photos placeholder
-            Section {
-                HStack {
-                    Spacer()
-                    VStack(spacing: 8) {
-                        Image(systemName: "photo.on.rectangle.angled")
-                            .font(.title)
-                            .foregroundStyle(.secondary)
-                        Text("Photos will appear here")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 20)
-                    Spacer()
-                }
-            } header: {
-                Text("Photos")
+            // Photos
+            if hasLocation, stop.day?.trip != nil {
+                StopPhotosView(stop: stop)
             }
         }
         .listStyle(.insetGrouped)

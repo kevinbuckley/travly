@@ -20,7 +20,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("TravelPlanner")
                             .font(.headline)
-                        Text("Version 1.0 (Prototype)")
+                        Text("Version 1.0")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

@@ -118,7 +118,7 @@ struct AddBookingSheet: View {
             TextField("Hotel Name", text: $hotelName)
             TextField("Address", text: $hotelAddress)
             DatePicker("Check-in", selection: $checkInDate, displayedComponents: [.date])
-            DatePicker("Check-out", selection: $checkOutDate, displayedComponents: [.date])
+            DatePicker("Check-out", selection: $checkOutDate, in: checkInDate..., displayedComponents: [.date])
         } header: {
             Text("Hotel Details")
         }

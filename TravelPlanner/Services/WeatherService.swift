@@ -75,8 +75,18 @@ final class WeatherService {
 
             forecasts = results
             isLoading = false
+        } catch let urlError as URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost:
+                errorMessage = "No internet connection"
+            case .timedOut:
+                errorMessage = "Request timed out"
+            default:
+                errorMessage = "Could not load weather"
+            }
+            isLoading = false
         } catch {
-            errorMessage = "Failed to load weather"
+            errorMessage = "Could not load weather"
             isLoading = false
         }
     }

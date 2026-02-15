@@ -4,8 +4,17 @@ import SwiftData
 struct ContentView: View {
 
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some View {
+        if hasCompletedOnboarding {
+            mainTabView
+        } else {
+            WelcomeView(hasCompletedOnboarding: $hasCompletedOnboarding)
+        }
+    }
+
+    private var mainTabView: some View {
         TabView {
             NavigationStack {
                 TripMapView()

@@ -15,6 +15,7 @@ struct EditTripSheet: View {
     @State private var endDate: Date
     @State private var notes: String
     @State private var status: TripStatus
+    @State private var showingDateChangeWarning = false
 
     init(trip: TripEntity) {
         self.trip = trip
@@ -76,27 +77,44 @@ struct EditTripSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        saveChanges()
+                        attemptSave()
                     }
                     .fontWeight(.semibold)
                     .disabled(!isValid)
                 }
             }
+            .alert("Change Trip Dates?", isPresented: $showingDateChangeWarning) {
+                Button("Change Dates", role: .destructive) {
+                    saveChanges(regenerateDays: true)
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Changing dates will regenerate the day-by-day plan. All existing stops and comments will be removed.")
+            }
         }
     }
 
-    private func saveChanges() {
+    private func attemptSave() {
+        let datesChanged = trip.startDate != startDate || trip.endDate != endDate
+        let hasStops = trip.days.contains { !$0.stops.isEmpty }
+
+        if datesChanged && hasStops {
+            showingDateChangeWarning = true
+        } else {
+            saveChanges(regenerateDays: datesChanged)
+        }
+    }
+
+    private func saveChanges(regenerateDays: Bool) {
         let manager = DataManager(modelContext: modelContext)
         trip.name = name.trimmingCharacters(in: .whitespaces)
         trip.destination = destination.trimmingCharacters(in: .whitespaces)
-
-        let datesChanged = trip.startDate != startDate || trip.endDate != endDate
         trip.startDate = startDate
         trip.endDate = endDate
         trip.notes = notes.trimmingCharacters(in: .whitespaces)
         trip.status = status
 
-        if datesChanged {
+        if regenerateDays {
             manager.generateDays(for: trip)
         }
 

@@ -31,6 +31,12 @@ struct TravelTimeRow: View {
 
     @ViewBuilder
     private func travelInfo(_ est: TravelTimeService.TravelEstimate) -> some View {
+        if est.drivingMinutes == nil && est.walkingMinutes == nil {
+            Text("Route unavailable")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+
         if let drivingMins = est.drivingMinutes {
             Label {
                 Text(formatDuration(drivingMins))
