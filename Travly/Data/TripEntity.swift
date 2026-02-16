@@ -24,6 +24,11 @@ final class TripEntity {
     @Relationship(deleteRule: .cascade, inverse: \BookingEntity.trip)
     var bookings: [BookingEntity]
 
+    @Relationship(deleteRule: .cascade, inverse: \TripListEntity.trip)
+    var lists: [TripListEntity]
+
+    var hasCustomDates: Bool
+
     // MARK: Computed Properties
 
     var status: TripStatus {
@@ -90,5 +95,7 @@ final class TripEntity {
         self.updatedAt = Date()
         self.days = []
         self.bookings = []
+        self.lists = []
+        self.hasCustomDates = true
     }
 }

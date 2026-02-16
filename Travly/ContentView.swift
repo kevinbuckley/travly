@@ -36,7 +36,7 @@ struct ContentView: View {
                         switch screenshotTab {
                         case "map": selectedTab = 0
                         case "trips": selectedTab = 1
-                        case "settings": selectedTab = 2
+                        case "settings": selectedTab = 3
                         case "tripdetail":
                             selectedTab = 1
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -78,12 +78,20 @@ struct ContentView: View {
             .tag(1)
 
             NavigationStack {
+                WishlistView()
+            }
+            .tabItem {
+                Label("Wishlist", systemImage: "heart")
+            }
+            .tag(2)
+
+            NavigationStack {
                 SettingsView()
             }
             .tabItem {
                 Label("Settings", systemImage: "gear")
             }
-            .tag(2)
+            .tag(3)
         }
         .tint(.blue)
     }

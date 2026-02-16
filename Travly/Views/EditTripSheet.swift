@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 import TripCore
 
 struct EditTripSheet: View {
@@ -16,6 +17,8 @@ struct EditTripSheet: View {
     @State private var notes: String
     @State private var status: TripStatus
     @State private var showingDateChangeWarning = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var coverPhotoData: Data?
 
     init(trip: TripEntity) {
         self.trip = trip
@@ -58,6 +61,34 @@ struct EditTripSheet: View {
                     }
                 } header: {
                     Text("Status")
+                }
+
+                Section {
+                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                        HStack {
+                            Label("Cover Photo", systemImage: "photo")
+                            Spacer()
+                            if coverPhotoData != nil || trip.coverPhotoAssetId != nil {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            } else {
+                                Text("None")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .onChange(of: selectedPhotoItem) { _, newItem in
+                        loadPhoto(from: newItem)
+                    }
+                    if coverPhotoData != nil || trip.coverPhotoAssetId != nil {
+                        Button("Remove Cover Photo", role: .destructive) {
+                            coverPhotoData = nil
+                            selectedPhotoItem = nil
+                            trip.coverPhotoAssetId = nil
+                        }
+                    }
+                } header: {
+                    Text("Cover Photo")
                 }
 
                 Section {
@@ -114,11 +145,25 @@ struct EditTripSheet: View {
         trip.notes = notes.trimmingCharacters(in: .whitespaces)
         trip.status = status
 
+        // Save photo identifier
+        if let item = selectedPhotoItem {
+            trip.coverPhotoAssetId = item.itemIdentifier
+        }
+
         if regenerateDays {
             manager.generateDays(for: trip)
         }
 
         manager.updateTrip(trip)
         dismiss()
+    }
+
+    private func loadPhoto(from item: PhotosPickerItem?) {
+        guard let item else { return }
+        Task {
+            if let data = try? await item.loadTransferable(type: Data.self) {
+                coverPhotoData = data
+            }
+        }
     }
 }

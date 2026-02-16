@@ -1,5 +1,7 @@
 import SwiftUI
 import SwiftData
+import MapKit
+import CoreLocation
 import TripCore
 
 struct TripDetailView: View {
@@ -19,6 +21,7 @@ struct TripDetailView: View {
     @State private var stopToDelete: StopEntity?
     @State private var bookingToDelete: BookingEntity?
     @State private var showingPasteItinerary = false
+    @State private var showingImportBooking = false
 
     private var sortedDays: [DayEntity] {
         trip.days.sorted { $0.dayNumber < $1.dayNumber }
@@ -56,6 +59,9 @@ struct TripDetailView: View {
                     daySection(day)
                 }
             }
+
+            // MARK: - Custom Lists
+            TripListsSection(trip: trip)
         }
         .listStyle(.insetGrouped)
         .navigationTitle(trip.name)
@@ -91,6 +97,9 @@ struct TripDetailView: View {
         }
         .sheet(isPresented: $showingPasteItinerary) {
             PasteItinerarySheet(trip: trip)
+        }
+        .sheet(isPresented: $showingImportBooking) {
+            ImportBookingSheet(trip: trip)
         }
         .alert("Start Trip?", isPresented: $showingStartConfirmation) {
             Button("Start", role: .none) {
@@ -159,18 +168,26 @@ struct TripDetailView: View {
                                 .font(.title3)
                                 .fontWeight(.medium)
                         }
-                        Text("\(dateFormatter.string(from: trip.startDate)) - \(dateFormatter.string(from: trip.endDate))")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        if trip.hasCustomDates {
+                            Text("\(dateFormatter.string(from: trip.startDate)) - \(dateFormatter.string(from: trip.endDate))")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Dates not set")
+                                .font(.subheadline)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                     Spacer()
                     StatusBadge(status: trip.status)
                 }
 
                 HStack(spacing: 16) {
-                    Label("\(trip.durationInDays) days", systemImage: "calendar")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if trip.hasCustomDates {
+                        Label("\(trip.durationInDays) days", systemImage: "calendar")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     Label("\(trip.days.count) day plans", systemImage: "list.bullet")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -269,6 +286,14 @@ struct TripDetailView: View {
                     .font(.subheadline)
                     .foregroundStyle(.blue)
             }
+
+            Button {
+                showingImportBooking = true
+            } label: {
+                Label("Import from Email", systemImage: "envelope.open")
+                    .font(.subheadline)
+                    .foregroundStyle(.blue)
+            }
         } header: {
             HStack {
                 Text("Flights & Hotels")
@@ -360,6 +385,7 @@ struct TripDetailView: View {
     private func daySection(_ day: DayEntity) -> some View {
         Section {
             let sortedStops = day.stops.sorted { $0.sortOrder < $1.sortOrder }
+            let locatedStops = sortedStops.filter { $0.latitude != 0 || $0.longitude != 0 }
 
             if !day.notes.isEmpty {
                 Text(day.notes)
@@ -367,6 +393,9 @@ struct TripDetailView: View {
                     .foregroundStyle(.secondary)
                     .italic()
             }
+
+            // Daily distance/time summary
+            daySummaryRow(locatedStops: locatedStops)
 
             ForEach(Array(sortedStops.enumerated()), id: \.element.id) { index, stop in
                 NavigationLink(destination: StopDetailView(stop: stop)) {
@@ -398,6 +427,16 @@ struct TripDetailView: View {
                 moveStops(in: day, from: source, to: destination)
             }
 
+            if locatedStops.count >= 3 {
+                Button {
+                    optimizeRoute(day: day)
+                } label: {
+                    Label("Optimize Route", systemImage: "arrow.triangle.swap")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+                }
+            }
+
             Button {
                 selectedDayForStop = day
             } label: {
@@ -407,6 +446,8 @@ struct TripDetailView: View {
             }
 
             aiSuggestRow(day: day)
+
+            openDayInMapsButton(day: day)
         } header: {
             HStack {
                 Text("Day \(day.dayNumber)")
@@ -417,6 +458,67 @@ struct TripDetailView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    // MARK: - Daily Summary
+
+    @ViewBuilder
+    private func daySummaryRow(locatedStops: [StopEntity]) -> some View {
+        if locatedStops.count >= 2 {
+            let totalKm = totalDistance(for: locatedStops)
+            let estimates = consecutiveEstimates(for: locatedStops)
+            let totalMinutes = estimates.compactMap(\.drivingMinutes).reduce(0, +)
+
+            HStack(spacing: 16) {
+                Label(formatDistance(totalKm), systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                    .font(.caption)
+                    .foregroundStyle(.teal)
+                if totalMinutes > 0 {
+                    Label(formatDuration(totalMinutes), systemImage: "car.fill")
+                        .font(.caption)
+                        .foregroundStyle(.teal)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    private func totalDistance(for stops: [StopEntity]) -> Double {
+        var total: Double = 0
+        for i in 0..<(stops.count - 1) {
+            let from = CLLocation(latitude: stops[i].latitude, longitude: stops[i].longitude)
+            let to = CLLocation(latitude: stops[i + 1].latitude, longitude: stops[i + 1].longitude)
+            total += from.distance(from: to)
+        }
+        return total / 1000.0 // km
+    }
+
+    private func consecutiveEstimates(for stops: [StopEntity]) -> [TravelTimeService.TravelEstimate] {
+        var results: [TravelTimeService.TravelEstimate] = []
+        for i in 0..<(stops.count - 1) {
+            if let est = travelTimeService.estimate(from: stops[i].id, to: stops[i + 1].id) {
+                results.append(est)
+            }
+        }
+        return results
+    }
+
+    private func formatDistance(_ km: Double) -> String {
+        if Locale.current.measurementSystem == .us {
+            let miles = km * 0.621371
+            return String(format: "%.1f mi", miles)
+        }
+        return String(format: "%.1f km", km)
+    }
+
+    private func formatDuration(_ minutes: Int) -> String {
+        if minutes < 60 {
+            return "\(minutes) min"
+        }
+        let hours = minutes / 60
+        let mins = minutes % 60
+        return mins > 0 ? "\(hours)h \(mins)m" : "\(hours)h"
     }
 
     // MARK: - Actions
@@ -503,5 +605,75 @@ struct TripDetailView: View {
         #else
         Text("Apple Intelligence requires iOS 26")
         #endif
+    }
+
+    // MARK: - Open Day in Apple Maps
+
+    private func openDayInMapsButton(day: DayEntity) -> some View {
+        let locatedStops = day.stops.sorted { $0.sortOrder < $1.sortOrder }
+            .filter { $0.latitude != 0 || $0.longitude != 0 }
+        return Group {
+            if locatedStops.count >= 2 {
+                Button {
+                    openDayInAppleMaps(stops: locatedStops)
+                } label: {
+                    Label("Open in Apple Maps", systemImage: "map")
+                        .font(.subheadline)
+                        .foregroundStyle(.blue)
+                }
+            }
+        }
+    }
+
+    private func openDayInAppleMaps(stops: [StopEntity]) {
+        guard stops.count >= 2 else { return }
+        let mapItems = stops.map { stop -> MKMapItem in
+            let placemark = MKPlacemark(coordinate: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude))
+            let item = MKMapItem(placemark: placemark)
+            item.name = stop.name
+            return item
+        }
+        // Open with all stops as waypoints
+        MKMapItem.openMaps(with: mapItems, launchOptions: [
+            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+        ])
+    }
+
+    // MARK: - Optimize Route
+
+    private func optimizeRoute(day: DayEntity) {
+        let stops = day.stops.sorted { $0.sortOrder < $1.sortOrder }
+            .filter { $0.latitude != 0 || $0.longitude != 0 }
+        guard stops.count >= 3 else { return }
+
+        // Nearest-neighbor optimization starting from first stop
+        var remaining = Array(stops.dropFirst())
+        var ordered: [StopEntity] = [stops[0]]
+
+        while !remaining.isEmpty {
+            let last = ordered.last!
+            let lastCoord = CLLocation(latitude: last.latitude, longitude: last.longitude)
+            var nearestIdx = 0
+            var nearestDist = Double.greatestFiniteMagnitude
+            for (i, stop) in remaining.enumerated() {
+                let d = lastCoord.distance(from: CLLocation(latitude: stop.latitude, longitude: stop.longitude))
+                if d < nearestDist {
+                    nearestDist = d
+                    nearestIdx = i
+                }
+            }
+            ordered.append(remaining.remove(at: nearestIdx))
+        }
+
+        // Update sort orders
+        for (index, stop) in ordered.enumerated() {
+            stop.sortOrder = index
+        }
+        // Update unlocated stops to be at the end
+        let unlocated = day.stops.filter { $0.latitude == 0 && $0.longitude == 0 }
+        for (i, stop) in unlocated.enumerated() {
+            stop.sortOrder = ordered.count + i
+        }
+        try? modelContext.save()
     }
 }

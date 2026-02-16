@@ -3,68 +3,45 @@ import Foundation
 import TripCore
 
 @Model
-final class StopEntity {
-
-    // MARK: Stored Properties
-
+final class WishlistItemEntity {
     var id: UUID
     var name: String
+    var destination: String
     var latitude: Double
     var longitude: Double
-    var arrivalTime: Date?
-    var departureTime: Date?
     var categoryRaw: String
     var notes: String
-    var sortOrder: Int
-    var isVisited: Bool
-    var visitedAt: Date?
     var address: String?
     var phone: String?
     var website: String?
-
-    var day: DayEntity?
-
-    @Relationship(deleteRule: .cascade, inverse: \CommentEntity.stop)
-    var comments: [CommentEntity]
-
-    // MARK: Computed Properties
+    var createdAt: Date
 
     var category: StopCategory {
         get { StopCategory(rawValue: categoryRaw) ?? .other }
         set { categoryRaw = newValue.rawValue }
     }
 
-    // MARK: Initializer
-
     init(
         name: String,
-        latitude: Double,
-        longitude: Double,
-        category: StopCategory = .other,
-        arrivalTime: Date? = nil,
-        departureTime: Date? = nil,
-        sortOrder: Int = 0,
+        destination: String = "",
+        latitude: Double = 0,
+        longitude: Double = 0,
+        category: StopCategory = .attraction,
         notes: String = "",
-        isVisited: Bool = false,
-        visitedAt: Date? = nil,
         address: String? = nil,
         phone: String? = nil,
         website: String? = nil
     ) {
         self.id = UUID()
         self.name = name
+        self.destination = destination
         self.latitude = latitude
         self.longitude = longitude
-        self.arrivalTime = arrivalTime
-        self.departureTime = departureTime
         self.categoryRaw = category.rawValue
-        self.sortOrder = sortOrder
         self.notes = notes
-        self.isVisited = isVisited
-        self.visitedAt = visitedAt
         self.address = address
         self.phone = phone
         self.website = website
-        self.comments = []
+        self.createdAt = Date()
     }
 }

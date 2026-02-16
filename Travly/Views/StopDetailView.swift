@@ -72,6 +72,26 @@ struct StopDetailView: View {
                         LabeledContent("Departure", value: timeFormatter.string(from: departure))
                     }
                 }
+
+                if let address = stop.address, !address.isEmpty {
+                    LabeledContent("Address", value: address)
+                }
+                if let phone = stop.phone, !phone.isEmpty {
+                    HStack {
+                        Text("Phone")
+                        Spacer()
+                        Link(phone, destination: URL(string: "tel:\(phone.filter { $0.isNumber || $0 == "+" })")!)
+                            .font(.subheadline)
+                    }
+                }
+                if let website = stop.website, !website.isEmpty {
+                    HStack {
+                        Text("Website")
+                        Spacer()
+                        Link("Open", destination: URL(string: website) ?? URL(string: "https://example.com")!)
+                            .font(.subheadline)
+                    }
+                }
             } header: {
                 Text("Details")
             }
