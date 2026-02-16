@@ -17,6 +17,7 @@ struct NearbyAISuggestSheet: View {
     @State private var planner = AITripPlanner()
     @State private var selectedIndices: Set<Int> = []
     @State private var addedCount = 0
+    @AppStorage("photoMatchRadiusMiles") private var nearbyRadiusMiles: Double = 1.0
 
     var body: some View {
         NavigationStack {
@@ -251,7 +252,8 @@ struct NearbyAISuggestSheet: View {
             stopCategory: stop.category.rawValue,
             latitude: stop.latitude,
             longitude: stop.longitude,
-            existingStops: existingNames
+            existingStops: existingNames,
+            radiusMiles: nearbyRadiusMiles
         )
     }
 

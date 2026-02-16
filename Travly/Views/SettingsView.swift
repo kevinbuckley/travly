@@ -46,11 +46,11 @@ struct SettingsView: View {
                 Text("Statistics")
             }
 
-            // Photo Matching
+            // Nearby Radius
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Photo Search Radius")
+                        Text("Search Radius")
                         Spacer()
                         Text(formatRadius(photoMatchRadiusMiles))
                             .foregroundStyle(.secondary)
@@ -60,9 +60,9 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 4)
             } header: {
-                Text("Photo Matching")
+                Text("Nearby")
             } footer: {
-                Text("How close a photo must be to a stop to be matched. Larger values find more photos but may be less accurate.")
+                Text("Used for photo matching and AI nearby suggestions. Larger values find more results but may be less accurate.")
             }
 
             // Data Management
