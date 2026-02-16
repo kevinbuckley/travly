@@ -199,6 +199,37 @@ struct AddStopSheet: View {
             stop.departureTime = departureTime
         }
         try? modelContext.save()
+
+        // Auto-populate place details from MapKit
+        if latitude != 0 || longitude != 0 {
+            Task {
+                await populatePlaceDetails(stop: stop)
+            }
+        }
+
         dismiss()
+    }
+
+    private func populatePlaceDetails(stop: StopEntity) async {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = stop.name
+        request.region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude),
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+        let search = MKLocalSearch(request: request)
+        do {
+            let response = try await search.start()
+            if let item = response.mapItems.first {
+                await MainActor.run {
+                    stop.phone = item.phoneNumber
+                    if let url = item.url { stop.website = url.absoluteString }
+                    let pm = item.placemark
+                    let parts = [pm.subThoroughfare, pm.thoroughfare, pm.locality, pm.administrativeArea, pm.postalCode].compactMap { $0 }
+                    if !parts.isEmpty { stop.address = parts.joined(separator: ", ") }
+                    try? modelContext.save()
+                }
+            }
+        } catch { }
     }
 }

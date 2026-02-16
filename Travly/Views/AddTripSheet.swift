@@ -11,11 +11,12 @@ struct AddTripSheet: View {
     @State private var startDate = Date()
     @State private var endDate = Calendar.current.date(byAdding: .day, value: 3, to: Date()) ?? Date()
     @State private var notes = ""
+    @State private var hasDates = true
 
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
         !destination.trimmingCharacters(in: .whitespaces).isEmpty &&
-        endDate >= startDate
+        (!hasDates || endDate >= startDate)
     }
 
     var body: some View {
@@ -29,10 +30,17 @@ struct AddTripSheet: View {
                 }
 
                 Section {
-                    DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
-                    DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                    Toggle("Set Dates", isOn: $hasDates)
+                    if hasDates {
+                        DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
+                        DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                    }
                 } header: {
                     Text("Dates")
+                } footer: {
+                    if !hasDates {
+                        Text("You can add dates later. A single planning day will be created.")
+                    }
                 }
 
                 Section {
@@ -63,13 +71,15 @@ struct AddTripSheet: View {
 
     private func createTrip() {
         let manager = DataManager(modelContext: modelContext)
-        manager.createTrip(
+        let trip = manager.createTrip(
             name: name.trimmingCharacters(in: .whitespaces),
             destination: destination.trimmingCharacters(in: .whitespaces),
-            startDate: startDate,
-            endDate: endDate,
+            startDate: hasDates ? startDate : Date(),
+            endDate: hasDates ? endDate : Date(),
             notes: notes.trimmingCharacters(in: .whitespaces)
         )
+        trip.hasCustomDates = hasDates
+        try? modelContext.save()
         dismiss()
     }
 }

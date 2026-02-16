@@ -21,6 +21,11 @@ struct TripRowView: View {
             HStack {
                 Text(trip.name)
                     .font(.headline)
+                if trip.coverPhotoAssetId != nil {
+                    Image(systemName: "photo.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.blue.opacity(0.6))
+                }
                 Spacer()
                 StatusBadge(status: trip.status)
             }
@@ -34,18 +39,32 @@ struct TripRowView: View {
                     .foregroundStyle(.secondary)
             }
 
-            HStack {
-                Text(dateRangeText)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                Spacer()
-                Text("\(trip.durationInDays) days")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                if stopCount > 0 {
-                    Text("  \(stopCount) stops")
+            if trip.hasCustomDates {
+                HStack {
+                    Text(dateRangeText)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
+                    Spacer()
+                    Text("\(trip.durationInDays) days")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    if stopCount > 0 {
+                        Text("  \(stopCount) stops")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            } else {
+                HStack {
+                    Text("Dates not set")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                    if stopCount > 0 {
+                        Text("\(stopCount) stops")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
         }

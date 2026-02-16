@@ -12,6 +12,8 @@ struct TripMapView: View {
     @State private var navigateToTripID: UUID?
     @State private var selectedStopID: UUID?
     @State private var navigateToStopID: UUID?
+    @State private var showNearbyPOIs = false
+    @State private var nearbyPOIs: [MKMapItem] = []
 
     private var activeTrip: TripEntity? {
         allTrips.first { $0.status == .active }
@@ -238,6 +240,27 @@ struct TripMapView: View {
                     .tint(markerColor(for: stop.category))
                     .tag(stop.id)
                 }
+
+                // Route lines between stops for selected trip
+                if let trip = selectedTrip {
+                    ForEach(trip.days.sorted(by: { $0.dayNumber < $1.dayNumber }), id: \.id) { day in
+                        let dayStops = day.stops.sorted { $0.sortOrder < $1.sortOrder }
+                            .filter { $0.latitude != 0 || $0.longitude != 0 }
+                        if dayStops.count >= 2 {
+                            let coords = dayStops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+                            MapPolyline(coordinates: coords)
+                                .stroke(dayColor(day.dayNumber), lineWidth: 3)
+                        }
+                    }
+                }
+
+                // Nearby POI markers
+                ForEach(nearbyPOIs, id: \.self) { poi in
+                    if let name = poi.name {
+                        Marker(name, systemImage: "fork.knife", coordinate: poi.placemark.coordinate)
+                            .tint(.red)
+                    }
+                }
             }
             .onAppear {
                 fitAllStops()
@@ -250,7 +273,10 @@ struct TripMapView: View {
             }
 
             if !allStops.isEmpty {
-                fitButton
+                VStack(spacing: 8) {
+                    fitButton
+                    nearbyToggleButton
+                }
             }
         }
     }
@@ -269,6 +295,52 @@ struct TripMapView: View {
         }
         .accessibilityLabel("Fit all stops on map")
         .padding()
+    }
+
+    private var nearbyToggleButton: some View {
+        Button {
+            showNearbyPOIs.toggle()
+            if showNearbyPOIs {
+                searchNearby()
+            } else {
+                nearbyPOIs = []
+            }
+        } label: {
+            Image(systemName: showNearbyPOIs ? "fork.knife.circle.fill" : "fork.knife.circle")
+                .font(.body)
+                .fontWeight(.medium)
+                .padding(10)
+                .background(.ultraThickMaterial)
+                .clipShape(Circle())
+                .shadow(radius: 2)
+        }
+        .accessibilityLabel(showNearbyPOIs ? "Hide nearby places" : "Show nearby restaurants")
+    }
+
+    private func searchNearby() {
+        guard !allStops.isEmpty else { return }
+        let lats = allStops.map(\.latitude)
+        let lons = allStops.map(\.longitude)
+        let centerLat = (lats.min()! + lats.max()!) / 2
+        let centerLon = (lons.min()! + lons.max()!) / 2
+
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = "restaurant"
+        request.region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        )
+        let search = MKLocalSearch(request: request)
+        Task {
+            if let response = try? await search.start() {
+                nearbyPOIs = Array(response.mapItems.prefix(15))
+            }
+        }
+    }
+
+    private func dayColor(_ dayNumber: Int) -> Color {
+        let colors: [Color] = [.blue, .green, .orange, .purple, .pink, .red, .teal, .indigo, .mint, .cyan]
+        return colors[(dayNumber - 1) % colors.count]
     }
 
     // MARK: - Helpers

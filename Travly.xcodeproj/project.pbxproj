@@ -23,21 +23,26 @@
 		38DF7819057E819754490D6E /* TripListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D187BC7D27F057FC79F7A98 /* TripListView.swift */; };
 		3E2B7571055B630F2C368494 /* StopRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF5FD9EB9A177759DEE383B /* StopRowView.swift */; };
 		3F0F15BE26FAF6EB794747DF /* StopDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55816489B3DAD47A179C77FA /* StopDetailView.swift */; };
+		454A0381D60302C17AD24BCD /* WishlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A7BC26AF8D78F5EDA06419 /* WishlistView.swift */; };
 		46FB0084A93632A60A768AF3 /* EditTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3D40E4ECC5AECFF12087C8 /* EditTripSheet.swift */; };
 		46FFC9ABE5C2491613113EF2 /* AddTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F36A11FD3E1E7021C5F02997 /* AddTripSheet.swift */; };
 		4EA4B637B817A71837CF1777 /* QuickAddStopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 171930E91C5C3993F629D04D /* QuickAddStopSheet.swift */; };
 		50394CBC36486E871DFF0A3B /* WeatherSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE5A960445ECC16847760868 /* WeatherSection.swift */; };
+		536D50A738E16B7DB624FFC5 /* TripListEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F77E572B302BAFBC087FC8E /* TripListEntity.swift */; };
 		590CC30DE66528D53A7AF3AE /* AddStopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 656FC522314C8B17E662171B /* AddStopSheet.swift */; };
 		5E72A33649D5492553C4404B /* EditStopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A076EFDEB1413713FC54B7F8 /* EditStopSheet.swift */; };
 		65333825B259DCB667857CBF /* TripPDFGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C646145A462D83ACD7E63623 /* TripPDFGenerator.swift */; };
+		661913F817E213C54B22C463 /* TripListsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACC0BAB3C44AACBE788758F2 /* TripListsSection.swift */; };
 		6A728F12104059B4F17EC79F /* CategoryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FDD0E7C2B384BAF3F329C28 /* CategoryPicker.swift */; };
 		6FCDEF6A49EE0FD7321E0A99 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2322CEA11A118ACE324BF2A0 /* WelcomeView.swift */; };
 		756EDF3008A2826BA6F9E5F0 /* LocateStopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68EC9EC922768C72B8E5CA54 /* LocateStopSheet.swift */; };
 		7C04C4A17B946D9735CF6799 /* TimelineStopRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79D0B6B807FFF29CAD57E2E3 /* TimelineStopRow.swift */; };
 		8B18C12863232709CCF384E7 /* TripCore in Frameworks */ = {isa = PBXBuildFile; productRef = F5CCF8D951A9540561CF2A9D /* TripCore */; };
+		8DC1F8680426C49884389B66 /* ImportBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 598BC831E962F0EB0B8060B6 /* ImportBookingSheet.swift */; };
 		8E8C42AF3A2155B0827F7DA1 /* ActiveTripDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D513CC9C1CE18397D4704BD /* ActiveTripDashboard.swift */; };
 		951F9E7BC1742A8FB3C41BD5 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7642C05A6780DBB1AE81A273 /* StatusBadge.swift */; };
 		9BD45050FB09738BE962F88B /* TripDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0AC1F1AF6A71C925DB5A1C /* TripDetailView.swift */; };
+		A09798A8342DA81A20F51A11 /* WishlistItemEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DD0442BD22E0D821DBBD894 /* WishlistItemEntity.swift */; };
 		A46EFDB94319FC36A2536594 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0FF763CDF32BBD771F47F59 /* SettingsView.swift */; };
 		A554F68C3AC53ED697D1C864 /* TravlyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FF456A94476A4B19DAA77EC /* TravlyTests.swift */; };
 		A699E40D11FB585D70DAA585 /* AITripPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA61D1D2C99FA76E1F8D896D /* AITripPlanner.swift */; };
@@ -52,6 +57,7 @@
 		D4C8741E6E266E8A49BDC75F /* TravlyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D52F71969034C036E68087 /* TravlyApp.swift */; };
 		D6C615ED9776A64277863A41 /* TravelTimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF9273BE664BF1CD78E5BE4E /* TravelTimeService.swift */; };
 		E8DA372BDE03B465C780BE66 /* StopPhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9CBF7AD92CD518C72F3BA90 /* StopPhotosView.swift */; };
+		FD64D09B3230CAFB93155C96 /* TripListItemEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9231EB44A71B070AAAF41817 /* TripListItemEntity.swift */; };
 		FF525527073D7F9140FB8706 /* StopEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8A2971B11387C911B5AB2AB /* StopEntity.swift */; };
 /* End PBXBuildFile section */
 
@@ -71,8 +77,10 @@
 		0D187BC7D27F057FC79F7A98 /* TripListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripListView.swift; sourceTree = "<group>"; };
 		171930E91C5C3993F629D04D /* QuickAddStopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddStopSheet.swift; sourceTree = "<group>"; };
 		1A0AC1F1AF6A71C925DB5A1C /* TripDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripDetailView.swift; sourceTree = "<group>"; };
+		1DD0442BD22E0D821DBBD894 /* WishlistItemEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WishlistItemEntity.swift; sourceTree = "<group>"; };
 		2322CEA11A118ACE324BF2A0 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		2E301C12F98E4405CE19B380 /* CommentEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentEntity.swift; sourceTree = "<group>"; };
+		2F77E572B302BAFBC087FC8E /* TripListEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripListEntity.swift; sourceTree = "<group>"; };
 		2FDD0E7C2B384BAF3F329C28 /* CategoryPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPicker.swift; sourceTree = "<group>"; };
 		2FF456A94476A4B19DAA77EC /* TravlyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravlyTests.swift; sourceTree = "<group>"; };
 		439FB6B15AE0ACC162EACEE7 /* SuggestStopsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestStopsSheet.swift; sourceTree = "<group>"; };
@@ -80,6 +88,7 @@
 		4E94BF365586F3C6938B520A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		526C0747D5F5225BE613CD93 /* TripMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripMapView.swift; sourceTree = "<group>"; };
 		55816489B3DAD47A179C77FA /* StopDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopDetailView.swift; sourceTree = "<group>"; };
+		598BC831E962F0EB0B8060B6 /* ImportBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportBookingSheet.swift; sourceTree = "<group>"; };
 		5E3D701159F8215391D9E6E8 /* TripEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripEntity.swift; sourceTree = "<group>"; };
 		656FC522314C8B17E662171B /* AddStopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddStopSheet.swift; sourceTree = "<group>"; };
 		68EC9EC922768C72B8E5CA54 /* LocateStopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocateStopSheet.swift; sourceTree = "<group>"; };
@@ -93,11 +102,13 @@
 		81D52F71969034C036E68087 /* TravlyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravlyApp.swift; sourceTree = "<group>"; };
 		871FC162371D442485362A6E /* ShareSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheetView.swift; sourceTree = "<group>"; };
 		8D73EE22C410FC622A996026 /* AddBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookingSheet.swift; sourceTree = "<group>"; };
+		9231EB44A71B070AAAF41817 /* TripListItemEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripListItemEntity.swift; sourceTree = "<group>"; };
 		96E3E46DBD876423B75E5B58 /* TripCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TripCore; path = Packages/TripCore; sourceTree = SOURCE_ROOT; };
 		9E8FDE7E54DD20E318DDA990 /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
 		A076EFDEB1413713FC54B7F8 /* EditStopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditStopSheet.swift; sourceTree = "<group>"; };
 		A0EA198A86B27FFEEF791C5C /* BookingEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingEntity.swift; sourceTree = "<group>"; };
 		A9CBF7AD92CD518C72F3BA90 /* StopPhotosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopPhotosView.swift; sourceTree = "<group>"; };
+		ACC0BAB3C44AACBE788758F2 /* TripListsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripListsSection.swift; sourceTree = "<group>"; };
 		AE5A960445ECC16847760868 /* WeatherSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherSection.swift; sourceTree = "<group>"; };
 		B9507EB4177C2F087C5318FC /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		B9BE83EF902553737155DF54 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
@@ -107,6 +118,7 @@
 		C8A2971B11387C911B5AB2AB /* StopEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopEntity.swift; sourceTree = "<group>"; };
 		CF9273BE664BF1CD78E5BE4E /* TravelTimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTimeService.swift; sourceTree = "<group>"; };
 		D1CB348BEB5DE3E2D27E23BD /* TravelTimeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTimeRow.swift; sourceTree = "<group>"; };
+		E3A7BC26AF8D78F5EDA06419 /* WishlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WishlistView.swift; sourceTree = "<group>"; };
 		EA61D1D2C99FA76E1F8D896D /* AITripPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITripPlanner.swift; sourceTree = "<group>"; };
 		F0FF763CDF32BBD771F47F59 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F1D9667BA07AE6716B6D2287 /* PasteItinerarySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteItinerarySheet.swift; sourceTree = "<group>"; };
@@ -163,6 +175,7 @@
 				739FD0FE659B6D018A5652F0 /* BookingDetailView.swift */,
 				A076EFDEB1413713FC54B7F8 /* EditStopSheet.swift */,
 				FA3D40E4ECC5AECFF12087C8 /* EditTripSheet.swift */,
+				598BC831E962F0EB0B8060B6 /* ImportBookingSheet.swift */,
 				68EC9EC922768C72B8E5CA54 /* LocateStopSheet.swift */,
 				F6A58A508A96961D4104BB6A /* NearbyAISuggestSheet.swift */,
 				F1D9667BA07AE6716B6D2287 /* PasteItinerarySheet.swift */,
@@ -171,9 +184,11 @@
 				55816489B3DAD47A179C77FA /* StopDetailView.swift */,
 				439FB6B15AE0ACC162EACEE7 /* SuggestStopsSheet.swift */,
 				1A0AC1F1AF6A71C925DB5A1C /* TripDetailView.swift */,
+				ACC0BAB3C44AACBE788758F2 /* TripListsSection.swift */,
 				0D187BC7D27F057FC79F7A98 /* TripListView.swift */,
 				526C0747D5F5225BE613CD93 /* TripMapView.swift */,
 				2322CEA11A118ACE324BF2A0 /* WelcomeView.swift */,
+				E3A7BC26AF8D78F5EDA06419 /* WishlistView.swift */,
 				5F276D1061953339D58FD646 /* Components */,
 			);
 			path = Views;
@@ -210,6 +225,9 @@
 				76BCEF2C1126B6E24195FC0B /* DayEntity.swift */,
 				C8A2971B11387C911B5AB2AB /* StopEntity.swift */,
 				5E3D701159F8215391D9E6E8 /* TripEntity.swift */,
+				2F77E572B302BAFBC087FC8E /* TripListEntity.swift */,
+				9231EB44A71B070AAAF41817 /* TripListItemEntity.swift */,
+				1DD0442BD22E0D821DBBD894 /* WishlistItemEntity.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -363,6 +381,7 @@
 				2F175721A0C7D9829479E2ED /* DayEntity.swift in Sources */,
 				5E72A33649D5492553C4404B /* EditStopSheet.swift in Sources */,
 				46FB0084A93632A60A768AF3 /* EditTripSheet.swift in Sources */,
+				8DC1F8680426C49884389B66 /* ImportBookingSheet.swift in Sources */,
 				756EDF3008A2826BA6F9E5F0 /* LocateStopSheet.swift in Sources */,
 				B5A7468846CA3FF836E175D1 /* LocationManager.swift in Sources */,
 				1F7F440A40F35E2647D4A371 /* LocationSearchView.swift in Sources */,
@@ -384,13 +403,18 @@
 				D4C8741E6E266E8A49BDC75F /* TravlyApp.swift in Sources */,
 				9BD45050FB09738BE962F88B /* TripDetailView.swift in Sources */,
 				C4E05445C3493C42553CA438 /* TripEntity.swift in Sources */,
+				536D50A738E16B7DB624FFC5 /* TripListEntity.swift in Sources */,
+				FD64D09B3230CAFB93155C96 /* TripListItemEntity.swift in Sources */,
 				38DF7819057E819754490D6E /* TripListView.swift in Sources */,
+				661913F817E213C54B22C463 /* TripListsSection.swift in Sources */,
 				AFB6E8E0466A41DDCDD88E70 /* TripMapView.swift in Sources */,
 				65333825B259DCB667857CBF /* TripPDFGenerator.swift in Sources */,
 				D0A8F90A038F5F5028FC1A7A /* TripRowView.swift in Sources */,
 				50394CBC36486E871DFF0A3B /* WeatherSection.swift in Sources */,
 				0C4B32958257FBEA826807C7 /* WeatherService.swift in Sources */,
 				6FCDEF6A49EE0FD7321E0A99 /* WelcomeView.swift in Sources */,
+				A09798A8342DA81A20F51A11 /* WishlistItemEntity.swift in Sources */,
+				454A0381D60302C17AD24BCD /* WishlistView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -419,7 +443,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = A6VYGLF4DB;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Travly;
@@ -449,7 +473,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = A6VYGLF4DB;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Travly;
