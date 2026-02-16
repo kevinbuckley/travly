@@ -128,7 +128,8 @@ final class AITripPlanner {
         stopCategory: String,
         latitude: Double,
         longitude: Double,
-        existingStops: [String]
+        existingStops: [String],
+        radiusMiles: Double = 1.0
     ) async {
         guard isAvailable else {
             errorMessage = "Apple Intelligence is not available on this device."
@@ -143,19 +144,20 @@ final class AITripPlanner {
             ? "None"
             : existingStops.joined(separator: ", ")
 
+        let radiusDesc = String(format: "%.1f mile(s) (%.1f km)", radiusMiles, radiusMiles * 1.60934)
+
         let prompt = """
         I am currently at \(stopName) (a \(stopCategory)) located at \
         coordinates \(latitude), \(longitude).
 
-        Suggest 5 highly-rated places that are within 1 mile (1.6 km) of \
-        my current location. Everything must be walkable — no driving. \
-        Focus on:
+        Suggest 5 highly-rated places that are within \(radiusDesc) of \
+        my current location. Focus on:
         - Great restaurants and cafés for a meal or snack
         - Notable attractions, landmarks, or hidden gems nearby
         - Fun activities in the immediate area
 
-        IMPORTANT: Only suggest places that are within 1 mile / 1.6 km \
-        walking distance from coordinates \(latitude), \(longitude). \
+        IMPORTANT: Only suggest places that are within \(radiusDesc) \
+        distance from coordinates \(latitude), \(longitude). \
         Do NOT suggest anything farther away.
 
         Already planned stops (do NOT duplicate these): \(existingList)
@@ -169,9 +171,9 @@ final class AITripPlanner {
                 """
                 You are a local expert guide. You recommend specific, real nearby \
                 places with accurate category classifications. Every suggestion \
-                MUST be within 1 mile (1.6 km) walking distance of the user's \
+                MUST be within \(radiusDesc) of the user's \
                 location. Suggest real place names that actually exist near the \
-                given coordinates. Never suggest places farther than 1 mile away.
+                given coordinates. Never suggest places farther than \(radiusDesc) away.
                 """
             }
             session = nearbySession
