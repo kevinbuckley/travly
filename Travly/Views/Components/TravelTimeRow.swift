@@ -79,11 +79,18 @@ struct TravelTimeRow: View {
     }
 
     private func formatDistance(_ meters: Double) -> String {
-        if meters < 1000 {
-            return "\(Int(meters))m"
-        } else {
+        if Locale.current.measurementSystem == .us {
             let miles = meters / 1609.34
+            if miles < 0.1 {
+                let feet = Int(meters * 3.28084)
+                return "\(feet) ft"
+            }
             return String(format: "%.1f mi", miles)
+        } else {
+            if meters < 1000 {
+                return "\(Int(meters)) m"
+            }
+            return String(format: "%.1f km", meters / 1000)
         }
     }
 }
