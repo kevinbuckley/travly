@@ -6,8 +6,10 @@ import TripCore
 struct TripPDFGenerator {
 
     static func generatePDF(for trip: TripEntity) -> Data {
-        let pageWidth: CGFloat = 612  // US Letter
-        let pageHeight: CGFloat = 792
+        // Use US Letter for US locale, A4 for everyone else
+        let isUS = Locale.current.measurementSystem == .us
+        let pageWidth: CGFloat = isUS ? 612 : 595.28   // US Letter vs A4
+        let pageHeight: CGFloat = isUS ? 792 : 841.89
         let margin: CGFloat = 50
         let contentWidth = pageWidth - margin * 2
 

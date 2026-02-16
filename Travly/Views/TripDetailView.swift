@@ -437,7 +437,8 @@ struct TripDetailView: View {
 
     @ViewBuilder
     private func aiSuggestRow(day: DayEntity) -> some View {
-        if #available(iOS 26, *) {
+        #if canImport(FoundationModels)
+        if #available(iOS 26, *), AITripPlanner.isDeviceSupported {
             Button {
                 selectedDayForAI = day
             } label: {
@@ -446,6 +447,7 @@ struct TripDetailView: View {
                     .foregroundStyle(.purple)
             }
         }
+        #endif
     }
 
     @ViewBuilder

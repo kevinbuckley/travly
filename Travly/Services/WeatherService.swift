@@ -49,8 +49,10 @@ final class WeatherService {
             let lat = location.coordinate.latitude
             let lon = location.coordinate.longitude
 
-            // Format dates for API
+            // Format dates for API (POSIX locale ensures Gregorian calendar on all devices)
             let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.calendar = Calendar(identifier: .gregorian)
             formatter.dateFormat = "yyyy-MM-dd"
 
             let start = formatter.string(from: startDate)
@@ -71,6 +73,8 @@ final class WeatherService {
 
             var results: [DayForecast] = []
             let dateParser = DateFormatter()
+            dateParser.locale = Locale(identifier: "en_US_POSIX")
+            dateParser.calendar = Calendar(identifier: .gregorian)
             dateParser.dateFormat = "yyyy-MM-dd"
 
             for i in 0..<decoded.daily.time.count {

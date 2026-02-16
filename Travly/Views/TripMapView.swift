@@ -26,7 +26,7 @@ struct TripMapView: View {
 
     private var allStops: [StopEntity] {
         guard let trip = selectedTrip else { return [] }
-        return trip.days.flatMap { $0.stops }
+        return trip.days.flatMap { $0.stops }.filter { $0.latitude != 0 || $0.longitude != 0 }
     }
 
     var body: some View {

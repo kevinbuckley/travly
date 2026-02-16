@@ -62,6 +62,11 @@ final class AITripPlanner {
         SystemLanguageModel.default.availability == .available
     }
 
+    /// Static availability check — can be called without an instance.
+    static var isDeviceSupported: Bool {
+        SystemLanguageModel.default.availability == .available
+    }
+
     /// Generate stop suggestions for a specific day of a trip.
     func suggestStops(
         destination: String,

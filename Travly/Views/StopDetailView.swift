@@ -294,7 +294,8 @@ struct StopDetailView: View {
 
     @ViewBuilder
     private var locateButton: some View {
-        if #available(iOS 26, *) {
+        #if canImport(FoundationModels)
+        if #available(iOS 26, *), AITripPlanner.isDeviceSupported {
             Button {
                 showingLocateAI = true
             } label: {
@@ -305,6 +306,7 @@ struct StopDetailView: View {
             .buttonStyle(.borderedProminent)
             .tint(.purple)
         }
+        #endif
     }
 
     @ViewBuilder
@@ -322,7 +324,8 @@ struct StopDetailView: View {
 
     @ViewBuilder
     private var nearbyAISection: some View {
-        if #available(iOS 26, *), hasLocation, stop.day != nil {
+        #if canImport(FoundationModels)
+        if #available(iOS 26, *), AITripPlanner.isDeviceSupported, hasLocation, stop.day != nil {
             Section {
                 Button {
                     showingNearbyAI = true
@@ -334,6 +337,7 @@ struct StopDetailView: View {
                 .listRowBackground(Color.clear)
             }
         }
+        #endif
     }
 
     private var nearbyButtonLabel: some View {
