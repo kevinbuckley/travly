@@ -3,10 +3,269 @@ import SwiftData
 import MapKit
 import TripCore
 
-#if canImport(FoundationModels)
-import FoundationModels
+// MARK: - Parsed Data Types (used by both AI and regex parsers)
 
-@available(iOS 26, *)
+struct ParsedStop: Identifiable {
+    let id = UUID()
+    var name: String
+    var note: String
+    var category: StopCategory
+    var durationMinutes: Int
+}
+
+struct ParsedDay: Identifiable {
+    let id = UUID()
+    var dayNumber: Int
+    var stops: [ParsedStop]
+}
+
+// MARK: - Regex-Based Itinerary Parser (works on all devices)
+
+struct ItineraryTextParser {
+
+    /// Parse free-form itinerary text into structured days and stops using heuristics.
+    static func parse(text: String, totalDays: Int) -> [ParsedDay] {
+        let lines = text.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        var days: [ParsedDay] = []
+        var currentDayNumber = 1
+        var currentStops: [ParsedStop] = []
+
+        for line in lines {
+            // Check if this line is a day header
+            if let dayNum = parseDayHeader(line, maxDay: totalDays) {
+                // Save previous day if it has stops
+                if !currentStops.isEmpty {
+                    days.append(ParsedDay(dayNumber: currentDayNumber, stops: currentStops))
+                    currentStops = []
+                }
+                currentDayNumber = dayNum
+                continue
+            }
+
+            // Try to parse as a stop
+            if let stop = parseStopLine(line) {
+                currentStops.append(stop)
+            }
+        }
+
+        // Save the last day
+        if !currentStops.isEmpty {
+            days.append(ParsedDay(dayNumber: currentDayNumber, stops: currentStops))
+        }
+
+        // Clamp day numbers to trip range
+        return days.map { day in
+            var d = day
+            d.dayNumber = min(max(d.dayNumber, 1), totalDays)
+            return d
+        }
+    }
+
+    // MARK: - Day Header Detection
+
+    private static func parseDayHeader(_ line: String, maxDay: Int) -> Int? {
+        let lowered = line.lowercased()
+
+        // "Day 1", "Day 1:", "Day 1 -", "Day 1 –", "**Day 1**", "## Day 1"
+        let dayPatterns: [String] = [
+            #"(?:^|\*{1,2}|#{1,3}\s*)day\s+(\d+)"#,
+        ]
+
+        for pattern in dayPatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: lowered, range: NSRange(lowered.startIndex..., in: lowered)),
+               let numRange = Range(match.range(at: 1), in: lowered),
+               let num = Int(lowered[numRange]) {
+                return min(num, maxDay)
+            }
+        }
+
+        return nil
+    }
+
+    // MARK: - Stop Line Detection
+
+    private static func parseStopLine(_ line: String) -> ParsedStop? {
+        var cleaned = line
+
+        // Strip markdown formatting: **, *, -, •, numbered list prefixes
+        let prefixPatterns = [
+            #"^\s*[-•*]\s*"#,           // bullet points
+            #"^\s*\d+[.)]\s*"#,          // numbered lists
+            #"^\s*\*{1,2}(.*?)\*{1,2}"#, // bold text (we keep inner content)
+        ]
+
+        for pattern in prefixPatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                let range = NSRange(cleaned.startIndex..., in: cleaned)
+                if let match = regex.firstMatch(in: cleaned, range: range) {
+                    // For bold pattern, extract inner text
+                    if pattern.contains("\\*") && match.numberOfRanges > 1,
+                       let innerRange = Range(match.range(at: 1), in: cleaned) {
+                        let boldText = String(cleaned[innerRange])
+                        let afterBold = String(cleaned[cleaned.index(cleaned.startIndex, offsetBy: match.range.upperBound)...])
+                        cleaned = boldText + afterBold
+                    } else {
+                        cleaned = String(cleaned[cleaned.index(cleaned.startIndex, offsetBy: match.range.upperBound)...])
+                    }
+                }
+            }
+        }
+
+        // Strip remaining markdown bold/italic markers
+        cleaned = cleaned.replacingOccurrences(of: "**", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "__", with: "")
+        cleaned = cleaned.trimmingCharacters(in: .whitespaces)
+
+        // Skip empty lines or very short lines (likely headers or separators)
+        guard cleaned.count >= 3 else { return nil }
+
+        // Skip lines that look like section headers without stop info
+        let skipPatterns = [
+            #"^(morning|afternoon|evening|night|lunch|dinner|breakfast|brunch)$"#,
+            #"^(overview|summary|tips|notes|budget|getting around|transportation).*$"#,
+        ]
+        for pattern in skipPatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+               regex.firstMatch(in: cleaned, range: NSRange(cleaned.startIndex..., in: cleaned)) != nil {
+                return nil
+            }
+        }
+
+        // Extract time-of-day prefix like "Morning:", "10:00 AM:", etc.
+        var note = ""
+        var stopName = cleaned
+
+        // Match "Morning: Place Name" or "10:00 AM - Place Name" patterns
+        let timePatterns = [
+            #"^(morning|afternoon|evening|night|lunch|dinner|breakfast|brunch)\s*[:–\-]\s*"#,
+            #"^\d{1,2}:\d{2}\s*(?:am|pm)?\s*[:–\-]\s*"#,
+            #"^\d{1,2}\s*(?:am|pm)\s*[:–\-]\s*"#,
+        ]
+        for pattern in timePatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: stopName, range: NSRange(stopName.startIndex..., in: stopName)) {
+                let prefix = String(stopName[Range(match.range, in: stopName)!])
+                note = prefix.trimmingCharacters(in: .whitespaces).trimmingCharacters(in: CharacterSet(charactersIn: ":-–"))
+                stopName = String(stopName[stopName.index(stopName.startIndex, offsetBy: match.range.upperBound)...])
+                    .trimmingCharacters(in: .whitespaces)
+                break
+            }
+        }
+
+        // Extract parenthetical notes like "(2 hours)" or "(great views)"
+        if let parenRegex = try? NSRegularExpression(pattern: #"\(([^)]+)\)"#),
+           let match = parenRegex.firstMatch(in: stopName, range: NSRange(stopName.startIndex..., in: stopName)),
+           let innerRange = Range(match.range(at: 1), in: stopName) {
+            let parenContent = String(stopName[innerRange])
+            if !note.isEmpty { note += " · " }
+            note += parenContent
+            stopName = parenRegex.stringByReplacingMatches(
+                in: stopName,
+                range: NSRange(stopName.startIndex..., in: stopName),
+                withTemplate: ""
+            ).trimmingCharacters(in: .whitespaces)
+        }
+
+        // Split on " - " or " – " to separate name from description
+        let separators = [" - ", " – ", " — ", ": "]
+        for sep in separators {
+            if let sepRange = stopName.range(of: sep) {
+                let possibleName = String(stopName[stopName.startIndex..<sepRange.lowerBound]).trimmingCharacters(in: .whitespaces)
+                let description = String(stopName[sepRange.upperBound...]).trimmingCharacters(in: .whitespaces)
+                // Only split if the first part looks like a place name (not too long)
+                if possibleName.count >= 3 && possibleName.count <= 80 {
+                    stopName = possibleName
+                    if !description.isEmpty {
+                        if !note.isEmpty { note += " · " }
+                        note += description
+                    }
+                    break
+                }
+            }
+        }
+
+        stopName = stopName.trimmingCharacters(in: .whitespaces)
+        guard stopName.count >= 2 else { return nil }
+
+        // Guess category from keywords
+        let category = guessCategory(name: stopName, note: note)
+
+        // Guess duration from category
+        let duration = guessDuration(category: category, note: note)
+
+        return ParsedStop(
+            name: stopName,
+            note: note,
+            category: category,
+            durationMinutes: duration
+        )
+    }
+
+    // MARK: - Category Guessing
+
+    private static func guessCategory(name: String, note: String) -> StopCategory {
+        let combined = (name + " " + note).lowercased()
+
+        let restaurantKeywords = ["restaurant", "café", "cafe", "bistro", "bakery", "bar", "pub",
+                                   "food", "eat", "lunch", "dinner", "breakfast", "brunch", "ramen",
+                                   "sushi", "pizza", "coffee", "tea house", "patisserie", "brasserie",
+                                   "trattoria", "tavern", "grill", "deli", "market hall", "food hall"]
+        let attractionKeywords = ["museum", "gallery", "temple", "shrine", "cathedral", "church",
+                                   "palace", "castle", "tower", "monument", "memorial", "park",
+                                   "garden", "bridge", "viewpoint", "landmark", "basilica", "ruins",
+                                   "library", "opera", "theater", "theatre", "square", "plaza",
+                                   "arch", "fountain", "statue"]
+        let activityKeywords = ["tour", "cruise", "hike", "walk", "shop", "shopping", "market",
+                                 "spa", "beach", "swim", "kayak", "bike", "cycle", "class",
+                                 "workshop", "show", "concert", "festival", "experience", "explore"]
+        let transportKeywords = ["airport", "station", "terminal", "port", "train", "bus", "ferry",
+                                  "taxi", "transfer", "departure", "arrival", "check-in", "checkout"]
+        let accommodationKeywords = ["hotel", "hostel", "airbnb", "resort", "lodge", "inn", "motel",
+                                      "accommodation", "check in", "check-in"]
+
+        if restaurantKeywords.contains(where: { combined.contains($0) }) { return .restaurant }
+        if attractionKeywords.contains(where: { combined.contains($0) }) { return .attraction }
+        if activityKeywords.contains(where: { combined.contains($0) }) { return .activity }
+        if transportKeywords.contains(where: { combined.contains($0) }) { return .transport }
+        if accommodationKeywords.contains(where: { combined.contains($0) }) { return .accommodation }
+
+        return .attraction // default
+    }
+
+    private static func guessDuration(category: StopCategory, note: String) -> Int {
+        // Try to extract explicit duration from note
+        let lowNote = note.lowercased()
+        if let hourRegex = try? NSRegularExpression(pattern: #"(\d+)\s*(?:hr|hour)"#),
+           let match = hourRegex.firstMatch(in: lowNote, range: NSRange(lowNote.startIndex..., in: lowNote)),
+           let numRange = Range(match.range(at: 1), in: lowNote),
+           let hours = Int(lowNote[numRange]) {
+            return hours * 60
+        }
+        if let minRegex = try? NSRegularExpression(pattern: #"(\d+)\s*(?:min)"#),
+           let match = minRegex.firstMatch(in: lowNote, range: NSRange(lowNote.startIndex..., in: lowNote)),
+           let numRange = Range(match.range(at: 1), in: lowNote),
+           let mins = Int(lowNote[numRange]) {
+            return mins
+        }
+
+        // Default durations by category
+        switch category {
+        case .restaurant: return 75
+        case .attraction: return 90
+        case .activity: return 120
+        case .transport: return 30
+        case .accommodation: return 0
+        case .other: return 60
+        }
+    }
+}
+
+// MARK: - PasteItinerarySheet
+
 struct PasteItinerarySheet: View {
 
     @Environment(\.modelContext) private var modelContext
@@ -14,12 +273,16 @@ struct PasteItinerarySheet: View {
 
     let trip: TripEntity
 
-    @State private var planner = AITripPlanner()
     @State private var inputText = ""
     @State private var phase: Phase = .input
+    @State private var parsedDays: [ParsedDay] = []
     @State private var selectedStops: Set<String> = [] // "dayNum-stopIndex"
     @State private var addedCount = 0
     @State private var geocodingInProgress = false
+    @State private var parseErrorMessage: String?
+
+    /// Holds a reference to AITripPlanner when available (stored as Any to avoid availability issues).
+    @State private var aiPlannerRef: AnyObject?
 
     private enum Phase {
         case input
@@ -30,6 +293,15 @@ struct PasteItinerarySheet: View {
 
     private var sortedDays: [DayEntity] {
         trip.days.sorted { $0.dayNumber < $1.dayNumber }
+    }
+
+    private var hasAI: Bool {
+        #if canImport(FoundationModels)
+        if #available(iOS 26, *) {
+            return AITripPlanner.isDeviceSupported
+        }
+        #endif
+        return false
     }
 
     var body: some View {
@@ -115,18 +387,18 @@ struct PasteItinerarySheet: View {
     }
 
     private var pasteHeader: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(.purple)
-                Text("Apple Intelligence will parse your text into stops")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .background(Color.purple.opacity(0.08))
+        HStack(spacing: 8) {
+            Image(systemName: hasAI ? "sparkles" : "text.magnifyingglass")
+                .foregroundStyle(.purple)
+            Text(hasAI
+                 ? "Apple Intelligence will parse your text into stops"
+                 : "Your text will be parsed into stops automatically")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .background(Color.purple.opacity(0.08))
     }
 
     private var pasteFromClipboardButton: some View {
@@ -156,7 +428,9 @@ struct PasteItinerarySheet: View {
                 .controlSize(.large)
             Text("Parsing your itinerary...")
                 .font(.headline)
-            Text("Apple Intelligence is extracting stops from your text")
+            Text(hasAI
+                 ? "Apple Intelligence is extracting stops from your text"
+                 : "Extracting stops from your text")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -201,19 +475,17 @@ struct PasteItinerarySheet: View {
             }
 
             List {
-                if let parsed = planner.parsedItinerary {
-                    summarySection(parsed)
+                summarySection
 
-                    ForEach(parsed.days.sorted(by: { $0.dayNumber < $1.dayNumber }), id: \.dayNumber) { parsedDay in
-                        dayPreviewSection(parsedDay)
-                    }
+                ForEach(parsedDays.sorted(by: { $0.dayNumber < $1.dayNumber })) { parsedDay in
+                    dayPreviewSection(parsedDay)
+                }
 
-                    Section {
-                        Button {
-                            phase = .input
-                        } label: {
-                            Label("Edit Original Text", systemImage: "pencil")
-                        }
+                Section {
+                    Button {
+                        phase = .input
+                    } label: {
+                        Label("Edit Original Text", systemImage: "pencil")
                     }
                 }
             }
@@ -221,15 +493,15 @@ struct PasteItinerarySheet: View {
         }
     }
 
-    private func summarySection(_ parsed: ParsedItinerary) -> some View {
-        let totalStops = parsed.days.reduce(0) { $0 + $1.stops.count }
+    private var summarySection: some View {
+        let totalStops = parsedDays.reduce(0) { $0 + $1.stops.count }
         return Section {
             HStack(spacing: 12) {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.title2)
                     .foregroundColor(.green)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Found \(totalStops) stop\(totalStops == 1 ? "" : "s") across \(parsed.days.count) day\(parsed.days.count == 1 ? "" : "s")")
+                    Text("Found \(totalStops) stop\(totalStops == 1 ? "" : "s") across \(parsedDays.count) day\(parsedDays.count == 1 ? "" : "s")")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                     Text("Tap to select, then add to your trip")
@@ -250,16 +522,15 @@ struct PasteItinerarySheet: View {
         }
     }
 
-    private func dayPreviewSection(_ parsedDay: ParsedItineraryDay) -> some View {
+    private func dayPreviewSection(_ parsedDay: ParsedDay) -> some View {
         let dayNum = min(parsedDay.dayNumber, sortedDays.count)
         let dayEntity = dayNum > 0 && dayNum <= sortedDays.count ? sortedDays[dayNum - 1] : nil
         let dateStr = dayEntity?.formattedDate ?? ""
 
         return Section {
-            ForEach(Array(parsedDay.stops.enumerated()), id: \.offset) { index, stop in
+            ForEach(Array(parsedDay.stops.enumerated()), id: \.element.id) { index, stop in
                 let key = "\(parsedDay.dayNumber)-\(index)"
                 let isSelected = selectedStops.contains(key)
-                let category = AITripPlanner.mapCategory(stop.category)
 
                 Button {
                     toggleStop(key)
@@ -281,7 +552,7 @@ struct PasteItinerarySheet: View {
                                     .lineLimit(2)
                             }
                             HStack(spacing: 8) {
-                                categoryBadge(category)
+                                categoryBadge(stop.category)
                                 if stop.durationMinutes > 0 {
                                     durationBadge(stop.durationMinutes)
                                 }
@@ -334,19 +605,76 @@ struct PasteItinerarySheet: View {
 
     private func parseText() {
         phase = .parsing
+
+        if hasAI {
+            parseWithAI()
+        } else {
+            parseWithRegex()
+        }
+    }
+
+    private func parseWithRegex() {
+        // Run on background to avoid blocking UI
         Task {
-            await planner.parseItinerary(
+            let result = ItineraryTextParser.parse(
                 text: inputText,
-                destination: trip.destination,
                 totalDays: trip.durationInDays
             )
-            if let _ = planner.parsedItinerary {
-                selectAll()
-                phase = .preview
-            } else {
-                phase = .error(planner.errorMessage ?? "Could not parse the itinerary. Please try again.")
+
+            await MainActor.run {
+                if result.isEmpty || result.allSatisfy({ $0.stops.isEmpty }) {
+                    phase = .error("Could not find any stops in the text. Try formatting each stop on its own line, optionally grouped under \"Day 1\", \"Day 2\", etc.")
+                } else {
+                    parsedDays = result
+                    selectAll()
+                    phase = .preview
+                }
             }
         }
+    }
+
+    private func parseWithAI() {
+        #if canImport(FoundationModels)
+        if #available(iOS 26, *) {
+            let planner = AITripPlanner()
+            self.aiPlannerRef = planner
+            Task {
+                await planner.parseItinerary(
+                    text: inputText,
+                    destination: trip.destination,
+                    totalDays: trip.durationInDays
+                )
+                if let parsed = planner.parsedItinerary {
+                    // Convert AI result to our local ParsedDay/ParsedStop types
+                    parsedDays = parsed.days.map { aiDay in
+                        ParsedDay(
+                            dayNumber: aiDay.dayNumber,
+                            stops: aiDay.stops.map { aiStop in
+                                ParsedStop(
+                                    name: aiStop.name,
+                                    note: aiStop.note,
+                                    category: AITripPlanner.mapCategory(aiStop.category),
+                                    durationMinutes: aiStop.durationMinutes
+                                )
+                            }
+                        )
+                    }
+                    if parsedDays.isEmpty || parsedDays.allSatisfy({ $0.stops.isEmpty }) {
+                        // AI returned nothing — fall back to regex
+                        parseWithRegex()
+                    } else {
+                        selectAll()
+                        phase = .preview
+                    }
+                } else {
+                    // AI failed — fall back to regex
+                    parseWithRegex()
+                }
+            }
+            return
+        }
+        #endif
+        parseWithRegex()
     }
 
     private func toggleStop(_ key: String) {
@@ -358,13 +686,12 @@ struct PasteItinerarySheet: View {
     }
 
     private var totalStopsCount: Int {
-        planner.parsedItinerary?.days.reduce(0) { $0 + $1.stops.count } ?? 0
+        parsedDays.reduce(0) { $0 + $1.stops.count }
     }
 
     private func selectAll() {
         selectedStops.removeAll()
-        guard let parsed = planner.parsedItinerary else { return }
-        for parsedDay in parsed.days {
+        for parsedDay in parsedDays {
             for index in 0..<parsedDay.stops.count {
                 selectedStops.insert("\(parsedDay.dayNumber)-\(index)")
             }
@@ -372,12 +699,11 @@ struct PasteItinerarySheet: View {
     }
 
     private func addSelectedStops() {
-        guard let parsed = planner.parsedItinerary else { return }
         let manager = DataManager(modelContext: modelContext)
         var count = 0
-        var addedStopEntities: [(StopEntity, String)] = [] // (entity, destination for geocoding)
+        var addedStopEntities: [(StopEntity, String)] = []
 
-        for parsedDay in parsed.days {
+        for parsedDay in parsedDays {
             let dayNum = min(max(parsedDay.dayNumber, 1), sortedDays.count)
             guard dayNum > 0, dayNum <= sortedDays.count else { continue }
             let dayEntity = sortedDays[dayNum - 1]
@@ -386,13 +712,12 @@ struct PasteItinerarySheet: View {
                 let key = "\(parsedDay.dayNumber)-\(index)"
                 guard selectedStops.contains(key) else { continue }
 
-                let category = AITripPlanner.mapCategory(parsedStop.category)
                 let stop = manager.addStop(
                     to: dayEntity,
                     name: parsedStop.name,
                     latitude: 0,
                     longitude: 0,
-                    category: category,
+                    category: parsedStop.category,
                     notes: parsedStop.note
                 )
                 addedStopEntities.append((stop, trip.destination))
@@ -427,9 +752,9 @@ struct PasteItinerarySheet: View {
                     }
                 }
             } catch {
-                // Geocoding failed for this stop — leave coordinates at 0,0
+                // Geocoding failed — leave coordinates at 0,0
             }
-            // Rate limit: Apple recommends max 1 request per second
+            // Rate limit
             try? await Task.sleep(for: .milliseconds(600))
         }
     }
@@ -448,7 +773,14 @@ struct PasteItinerarySheet: View {
     }
 
     private func durationBadge(_ minutes: Int) -> some View {
-        let text = minutes >= 60 ? "\(minutes / 60)h \(minutes % 60 > 0 ? " \(minutes % 60)m" : "")" : "\(minutes)m"
+        let text: String
+        if minutes >= 60 {
+            let h = minutes / 60
+            let m = minutes % 60
+            text = m > 0 ? "\(h)h \(m)m" : "\(h)h"
+        } else {
+            text = "\(minutes)m"
+        }
         return Label(text, systemImage: "clock")
             .font(.caption2)
             .foregroundColor(.secondary)
@@ -487,4 +819,3 @@ struct PasteItinerarySheet: View {
         }
     }
 }
-#endif
