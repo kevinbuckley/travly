@@ -142,18 +142,9 @@ struct SettingsView: View {
     }
 
     private func formatRadius(_ miles: Double) -> String {
-        if Locale.current.measurementSystem == .us {
-            if miles < 1.0 {
-                let feet = Int(miles * 5280)
-                return "\(feet) ft"
-            }
-            return String(format: "%.1f mi", miles)
-        } else {
-            let km = miles * 1.60934
-            if km < 1.0 {
-                return "\(Int(km * 1000)) m"
-            }
-            return String(format: "%.1f km", km)
+        if miles == 1.0 {
+            return "1 mile"
         }
+        return String(format: "%.1f miles", miles)
     }
 }
