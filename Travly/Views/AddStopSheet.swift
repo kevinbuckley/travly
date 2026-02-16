@@ -17,6 +17,7 @@ struct AddStopSheet: View {
     @State private var latitude: Double = 0
     @State private var longitude: Double = 0
     @State private var locationName = ""
+    @State private var locationCity = ""
 
     @State private var useArrivalTime = false
     @State private var arrivalTime = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
@@ -80,7 +81,8 @@ struct AddStopSheet: View {
             LocationSearchView(
                 selectedName: $locationName,
                 selectedLatitude: $latitude,
-                selectedLongitude: $longitude
+                selectedLongitude: $longitude,
+                selectedCity: $locationCity
             )
             .listRowInsets(EdgeInsets())
         } header: {

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import TripCore
 
 struct ContentView: View {
 
@@ -36,6 +37,7 @@ struct ContentView: View {
                         switch screenshotTab {
                         case "map": selectedTab = 0
                         case "trips": selectedTab = 1
+                        case "wishlist": selectedTab = 2
                         case "settings": selectedTab = 3
                         case "tripdetail":
                             selectedTab = 1
@@ -104,6 +106,27 @@ struct ContentView: View {
             let manager = DataManager(modelContext: modelContext)
             manager.loadSampleDataIfEmpty()
         }
+        let wishlistDescriptor = FetchDescriptor<WishlistItemEntity>()
+        let wishlistCount = (try? modelContext.fetchCount(wishlistDescriptor)) ?? 0
+        if wishlistCount == 0 {
+            seedWishlistItems()
+        }
+    }
+
+    private func seedWishlistItems() {
+        let items: [(String, String, Double, Double, StopCategory)] = [
+            ("Sagrada Família", "Barcelona", 41.4036, 2.1744, .attraction),
+            ("Tsukiji Outer Market", "Tokyo", 35.6654, 139.7707, .restaurant),
+            ("Santorini Sunset", "Santorini", 36.4310, 25.4315, .activity),
+            ("Banff National Park", "Alberta", 51.4968, -115.9281, .activity),
+            ("Borough Market", "London", 51.5055, -0.0910, .restaurant),
+            ("Colosseum", "Rome", 41.8902, 12.4922, .attraction),
+        ]
+        for (name, city, lat, lon, cat) in items {
+            let item = WishlistItemEntity(name: name, destination: city, latitude: lat, longitude: lon, category: cat)
+            modelContext.insert(item)
+        }
+        try? modelContext.save()
     }
     #endif
 }

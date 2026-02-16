@@ -5,6 +5,7 @@ struct LocationSearchResult: Identifiable {
     let id = UUID()
     let name: String
     let subtitle: String
+    let city: String
     let latitude: Double
     let longitude: Double
 }
@@ -14,6 +15,7 @@ struct LocationSearchView: View {
     @Binding var selectedName: String
     @Binding var selectedLatitude: Double
     @Binding var selectedLongitude: Double
+    @Binding var selectedCity: String
 
     @State private var searchText = ""
     @State private var searchResults: [LocationSearchResult] = []
@@ -217,11 +219,14 @@ struct LocationSearchView: View {
             let response = try await search.start()
             guard !Task.isCancelled else { return }
             searchResults = response.mapItems.prefix(6).map { item in
-                LocationSearchResult(
+                let placemark = item.placemark
+                let city = placemark.locality ?? placemark.administrativeArea ?? ""
+                return LocationSearchResult(
                     name: item.name ?? "Unknown",
-                    subtitle: item.placemark.title ?? "",
-                    latitude: item.placemark.coordinate.latitude,
-                    longitude: item.placemark.coordinate.longitude
+                    subtitle: placemark.title ?? "",
+                    city: city,
+                    latitude: placemark.coordinate.latitude,
+                    longitude: placemark.coordinate.longitude
                 )
             }
             if searchResults.isEmpty {
@@ -244,6 +249,7 @@ struct LocationSearchView: View {
         selectedName = result.name
         selectedLatitude = result.latitude
         selectedLongitude = result.longitude
+        selectedCity = result.city
         searchText = result.name
         searchResults = []
         hasSelected = true
@@ -262,6 +268,7 @@ struct LocationSearchView: View {
         selectedName = ""
         selectedLatitude = 0
         selectedLongitude = 0
+        selectedCity = ""
         hasSelected = false
         cameraPosition = .automatic
     }

@@ -11,6 +11,30 @@ struct WishlistView: View {
 
     @State private var showingAddItem = false
     @State private var itemToAddToTrip: WishlistItemEntity?
+    @State private var itemToEdit: WishlistItemEntity?
+    @State private var selectedCity: String = "All"
+
+    private var uniqueCities: [String] {
+        let cities = items.compactMap { $0.destination.isEmpty ? nil : $0.destination }
+        return Array(Set(cities)).sorted()
+    }
+
+    private var filterOptions: [String] {
+        var options = ["All"] + uniqueCities
+        let hasUncategorized = items.contains { $0.destination.isEmpty }
+        if hasUncategorized && !uniqueCities.isEmpty {
+            options.append("Other")
+        }
+        return options
+    }
+
+    private var filteredItems: [WishlistItemEntity] {
+        switch selectedCity {
+        case "All": return items
+        case "Other": return items.filter { $0.destination.isEmpty }
+        default: return items.filter { $0.destination == selectedCity }
+        }
+    }
 
     var body: some View {
         Group {
@@ -33,6 +57,9 @@ struct WishlistView: View {
         }
         .sheet(item: $itemToAddToTrip) { item in
             AddWishlistToTripSheet(item: item, trips: allTrips)
+        }
+        .sheet(item: $itemToEdit) { item in
+            EditWishlistItemSheet(item: item)
         }
     }
 
@@ -63,9 +90,16 @@ struct WishlistView: View {
     }
 
     private var listContent: some View {
-        List {
-            ForEach(items) { item in
-                wishlistRow(item)
+        VStack(spacing: 0) {
+            if filterOptions.count > 2 {
+                cityFilterBar
+            }
+            List {
+                ForEach(filteredItems) { item in
+                    Button { itemToEdit = item } label: {
+                        wishlistRow(item)
+                    }
+                    .buttonStyle(.plain)
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             modelContext.delete(item)
@@ -82,9 +116,37 @@ struct WishlistView: View {
                         }
                         .tint(.blue)
                     }
+                }
             }
+            .listStyle(.insetGrouped)
         }
-        .listStyle(.insetGrouped)
+    }
+
+    private var cityFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(filterOptions, id: \.self) { option in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedCity = option
+                        }
+                    } label: {
+                        Text(option)
+                            .font(.subheadline)
+                            .fontWeight(selectedCity == option ? .semibold : .regular)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(selectedCity == option ? Color.pink : Color(.systemGray5))
+                            .foregroundStyle(selectedCity == option ? .white : .primary)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+        }
+        .background(Color(.systemGroupedBackground))
     }
 
     private func wishlistRow(_ item: WishlistItemEntity) -> some View {
@@ -153,19 +215,18 @@ struct AddWishlistItemSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
-    @State private var destination = ""
     @State private var category: StopCategory = .attraction
     @State private var notes = ""
     @State private var latitude: Double = 0
     @State private var longitude: Double = 0
     @State private var locationName = ""
+    @State private var locationCity = ""
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     TextField("Place Name", text: $name)
-                    TextField("City / Region", text: $destination)
                     CategoryPicker(selection: $category)
                 } header: { Text("Details") }
 
@@ -173,10 +234,11 @@ struct AddWishlistItemSheet: View {
                     LocationSearchView(
                         selectedName: $locationName,
                         selectedLatitude: $latitude,
-                        selectedLongitude: $longitude
+                        selectedLongitude: $longitude,
+                        selectedCity: $locationCity
                     )
                     .listRowInsets(EdgeInsets())
-                } header: { Text("Location (optional)") }
+                } header: { Text("Location") }
 
                 Section {
                     TextField("Notes", text: $notes, axis: .vertical)
@@ -201,7 +263,7 @@ struct AddWishlistItemSheet: View {
     private func saveItem() {
         let item = WishlistItemEntity(
             name: name.trimmingCharacters(in: .whitespaces),
-            destination: destination.trimmingCharacters(in: .whitespaces),
+            destination: locationCity.trimmingCharacters(in: .whitespaces),
             latitude: latitude,
             longitude: longitude,
             category: category,
@@ -311,5 +373,79 @@ struct AddWishlistToTripSheet: View {
         stop.website = item.website
         try? modelContext.save()
         added = true
+    }
+}
+
+// MARK: - Edit Wishlist Item Sheet
+
+struct EditWishlistItemSheet: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    @Bindable var item: WishlistItemEntity
+
+    @State private var name: String = ""
+    @State private var category: StopCategory = .attraction
+    @State private var notes: String = ""
+    @State private var latitude: Double = 0
+    @State private var longitude: Double = 0
+    @State private var locationName: String = ""
+    @State private var locationCity: String = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Place Name", text: $name)
+                    CategoryPicker(selection: $category)
+                } header: { Text("Details") }
+
+                Section {
+                    LocationSearchView(
+                        selectedName: $locationName,
+                        selectedLatitude: $latitude,
+                        selectedLongitude: $longitude,
+                        selectedCity: $locationCity
+                    )
+                    .listRowInsets(EdgeInsets())
+                } header: { Text("Location") }
+
+                Section {
+                    TextField("Notes", text: $notes, axis: .vertical)
+                        .lineLimit(2...4)
+                } header: { Text("Notes") }
+            }
+            .navigationTitle("Edit Place")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { saveChanges() }
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .onAppear { loadItem() }
+        }
+    }
+
+    private func loadItem() {
+        name = item.name
+        category = item.category
+        notes = item.notes
+        latitude = item.latitude
+        longitude = item.longitude
+        locationName = item.name
+        locationCity = item.destination
+    }
+
+    private func saveChanges() {
+        item.name = name.trimmingCharacters(in: .whitespaces)
+        item.category = category
+        item.notes = notes.trimmingCharacters(in: .whitespaces)
+        item.latitude = latitude
+        item.longitude = longitude
+        item.destination = locationCity.trimmingCharacters(in: .whitespaces)
+        try? modelContext.save()
+        dismiss()
     }
 }

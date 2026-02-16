@@ -277,6 +277,8 @@ struct TripMapView: View {
                     fitButton
                     nearbyToggleButton
                 }
+                .padding(.trailing, 12)
+                .padding(.bottom, 24)
             }
         }
     }
@@ -294,7 +296,6 @@ struct TripMapView: View {
                 .shadow(radius: 2)
         }
         .accessibilityLabel("Fit all stops on map")
-        .padding()
     }
 
     private var nearbyToggleButton: some View {
