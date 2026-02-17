@@ -2,216 +2,412 @@ import UIKit
 import SwiftUI
 import TripCore
 
-/// Generates a clean PDF itinerary for a trip.
+/// Generates a beautifully designed PDF itinerary for a trip.
 struct TripPDFGenerator {
 
+    // MARK: - Color Palette
+
+    private static let accentBlue = UIColor(red: 0.20, green: 0.40, blue: 0.85, alpha: 1.0)
+    private static let accentBlueBg = UIColor(red: 0.20, green: 0.40, blue: 0.85, alpha: 0.08)
+    private static let headerDark = UIColor(red: 0.12, green: 0.14, blue: 0.20, alpha: 1.0)
+    private static let bodyText = UIColor(red: 0.20, green: 0.22, blue: 0.28, alpha: 1.0)
+    private static let subtitleGray = UIColor(red: 0.45, green: 0.47, blue: 0.53, alpha: 1.0)
+    private static let lightGray = UIColor(red: 0.70, green: 0.72, blue: 0.76, alpha: 1.0)
+    private static let dividerColor = UIColor(red: 0.88, green: 0.89, blue: 0.91, alpha: 1.0)
+
+    private static let catColors: [StopCategory: UIColor] = [
+        .accommodation: UIColor(red: 0.56, green: 0.27, blue: 0.85, alpha: 1.0),
+        .restaurant: UIColor(red: 0.92, green: 0.50, blue: 0.15, alpha: 1.0),
+        .attraction: UIColor(red: 0.85, green: 0.65, blue: 0.05, alpha: 1.0),
+        .transport: UIColor(red: 0.20, green: 0.50, blue: 0.90, alpha: 1.0),
+        .activity: UIColor(red: 0.20, green: 0.72, blue: 0.40, alpha: 1.0),
+        .other: UIColor(red: 0.55, green: 0.57, blue: 0.62, alpha: 1.0),
+    ]
+
+    // MARK: - Generate
+
     static func generatePDF(for trip: TripEntity) -> Data {
-        // Use US Letter for US locale, A4 for everyone else
         let isUS = Locale.current.measurementSystem == .us
-        let pageWidth: CGFloat = isUS ? 612 : 595.28   // US Letter vs A4
-        let pageHeight: CGFloat = isUS ? 792 : 841.89
-        let margin: CGFloat = 50
-        let contentWidth = pageWidth - margin * 2
+        let pw: CGFloat = isUS ? 612 : 595.28
+        let ph: CGFloat = isUS ? 792 : 841.89
+        let m: CGFloat = 48
+        let cw = pw - m * 2
 
-        let renderer = UIGraphicsPDFRenderer(
-            bounds: CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight)
-        )
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: pw, height: ph))
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.timeStyle = .none
+        let dateFmt = DateFormatter()
+        dateFmt.dateStyle = .medium; dateFmt.timeStyle = .none
+        let timeFmt = DateFormatter()
+        timeFmt.dateStyle = .none; timeFmt.timeStyle = .short
+        let shortFmt = DateFormatter()
+        shortFmt.dateFormat = "EEE, MMM d"
 
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateStyle = .none
-        timeFormatter.timeStyle = .short
+        return renderer.pdfData { ctx in
+            var y: CGFloat = 0
 
-        let data = renderer.pdfData { context in
-            var yOffset: CGFloat = 0
+            // MARK: Helpers
 
-            func startNewPage() {
-                context.beginPage()
-                yOffset = margin
+            func newPage() { ctx.beginPage(); y = m }
+
+            func space(_ needed: CGFloat) {
+                if y + needed > ph - m - 20 { footer(); newPage() }
             }
 
-            func ensureSpace(_ needed: CGFloat) {
-                if yOffset + needed > pageHeight - margin {
-                    startNewPage()
-                }
+            func text(_ s: String, font: UIFont, color: UIColor = bodyText, x: CGFloat = m, w: CGFloat? = nil) {
+                let style = NSMutableParagraphStyle(); style.lineSpacing = 2
+                let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color, .paragraphStyle: style]
+                let maxW = w ?? cw
+                let rect = (s as NSString).boundingRect(with: CGSize(width: maxW, height: .greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: attrs, context: nil)
+                (s as NSString).draw(in: CGRect(x: x, y: y, width: maxW, height: rect.height), withAttributes: attrs)
+                y += rect.height
             }
 
-            func drawText(_ text: String, font: UIFont, color: UIColor = .black, x: CGFloat = margin, maxWidth: CGFloat? = nil) -> CGFloat {
-                let attrs: [NSAttributedString.Key: Any] = [
-                    .font: font,
-                    .foregroundColor: color
-                ]
-                let width = maxWidth ?? contentWidth
-                let constraintSize = CGSize(width: width, height: .greatestFiniteMagnitude)
-                let boundingRect = (text as NSString).boundingRect(
-                    with: constraintSize,
-                    options: [.usesLineFragmentOrigin, .usesFontLeading],
-                    attributes: attrs,
-                    context: nil
-                )
-                let drawRect = CGRect(x: x, y: yOffset, width: width, height: boundingRect.height)
-                (text as NSString).draw(in: drawRect, withAttributes: attrs)
-                let height = boundingRect.height
-                yOffset += height
-                return height
+            func draw(_ s: String, at pt: CGPoint, font: UIFont, color: UIColor) {
+                let a: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+                (s as NSString).draw(at: pt, withAttributes: a)
             }
 
-            func drawDivider() {
-                let path = UIBezierPath()
-                path.move(to: CGPoint(x: margin, y: yOffset))
-                path.addLine(to: CGPoint(x: pageWidth - margin, y: yOffset))
-                UIColor.lightGray.setStroke()
-                path.lineWidth = 0.5
-                path.stroke()
-                yOffset += 8
+            func sizeOf(_ s: String, font: UIFont) -> CGSize {
+                (s as NSString).size(withAttributes: [.font: font])
             }
 
-            // === PAGE 1: Title Page ===
-            startNewPage()
-            yOffset = pageHeight * 0.3
+            func divider() {
+                let p = UIBezierPath()
+                p.move(to: CGPoint(x: m, y: y))
+                p.addLine(to: CGPoint(x: pw - m, y: y))
+                dividerColor.setStroke(); p.lineWidth = 0.5; p.stroke()
+                y += 12
+            }
 
-            _ = drawText(trip.name, font: .systemFont(ofSize: 28, weight: .bold), color: .black)
-            yOffset += 8
-            _ = drawText(trip.destination, font: .systemFont(ofSize: 18), color: .darkGray)
-            yOffset += 4
-            let dateRange = "\(dateFormatter.string(from: trip.startDate)) – \(dateFormatter.string(from: trip.endDate))"
-            _ = drawText(dateRange, font: .systemFont(ofSize: 14), color: .gray)
-            yOffset += 4
-            _ = drawText("\(trip.durationInDays) days", font: .systemFont(ofSize: 14), color: .gray)
+            func footer() {
+                let fy = ph - 30
+                ctx.cgContext.setStrokeColor(dividerColor.cgColor)
+                ctx.cgContext.setLineWidth(0.5)
+                ctx.cgContext.move(to: CGPoint(x: 48, y: fy - 6))
+                ctx.cgContext.addLine(to: CGPoint(x: pw - 48, y: fy - 6))
+                ctx.cgContext.strokePath()
+                draw("Travly  •  \(trip.name)", at: CGPoint(x: 48, y: fy), font: .systemFont(ofSize: 8, weight: .medium), color: lightGray)
+            }
+
+            func fillRect(_ rect: CGRect, color: UIColor, radius: CGFloat = 0) {
+                let p = UIBezierPath(roundedRect: rect, cornerRadius: radius)
+                color.setFill(); p.fill()
+            }
+
+            // ================================================================
+            // COVER PAGE
+            // ================================================================
+            newPage()
+
+            // Top accent stripe
+            fillRect(CGRect(x: 0, y: 0, width: pw, height: 6), color: accentBlue)
+
+            y = ph * 0.28
+            draw("✈  YOUR TRIP TO", at: CGPoint(x: m, y: y), font: .systemFont(ofSize: 14, weight: .medium), color: accentBlue)
+            y += 24
+
+            text(trip.name.uppercased(), font: .systemFont(ofSize: 34, weight: .heavy), color: headerDark)
+            y += 6
+            fillRect(CGRect(x: m, y: y, width: 60, height: 3), color: accentBlue)
+            y += 16
+
+            text(trip.destination, font: .systemFont(ofSize: 20, weight: .medium), color: subtitleGray)
+            y += 12
+            text("\(dateFmt.string(from: trip.startDate))  –  \(dateFmt.string(from: trip.endDate))", font: .systemFont(ofSize: 13), color: lightGray)
+            y += 4
+            text("\(trip.durationInDays) days", font: .systemFont(ofSize: 13), color: lightGray)
+
+            // Stats bar
+            y += 36
+            let stopCount = trip.days.reduce(0) { $0 + $1.stops.count }
+            let bkCount = trip.bookings.count
+            fillRect(CGRect(x: m, y: y, width: cw, height: 56), color: accentBlueBg, radius: 10)
+
+            let stats: [(String, String)] = [("\(trip.durationInDays)", "DAYS"), ("\(stopCount)", "STOPS"), ("\(bkCount)", "BOOKINGS"), ("\(trip.days.count)", "DAY PLANS")]
+            let sw = cw / CGFloat(stats.count)
+            for (i, stat) in stats.enumerated() {
+                let cx = m + sw * CGFloat(i) + sw / 2
+                let ns = sizeOf(stat.0, font: .systemFont(ofSize: 22, weight: .bold))
+                draw(stat.0, at: CGPoint(x: cx - ns.width / 2, y: y + 8), font: .systemFont(ofSize: 22, weight: .bold), color: accentBlue)
+                let ls = sizeOf(stat.1, font: .systemFont(ofSize: 9, weight: .semibold))
+                draw(stat.1, at: CGPoint(x: cx - ls.width / 2, y: y + 34), font: .systemFont(ofSize: 9, weight: .semibold), color: subtitleGray)
+            }
+            y += 56
 
             if !trip.notes.isEmpty {
-                yOffset += 20
-                _ = drawText(trip.notes, font: .italicSystemFont(ofSize: 12), color: .darkGray)
+                y += 24
+                text(trip.notes, font: .italicSystemFont(ofSize: 11), color: subtitleGray)
             }
+            footer()
 
-            // === Bookings Page ===
-            let sortedBookings = trip.bookings.sorted { $0.sortOrder < $1.sortOrder }
-            if !sortedBookings.isEmpty {
-                startNewPage()
-                _ = drawText("Bookings", font: .systemFont(ofSize: 22, weight: .bold))
-                yOffset += 12
+            // ================================================================
+            // BOOKINGS
+            // ================================================================
+            let bookings = trip.bookings.sorted { $0.sortOrder < $1.sortOrder }
+            if !bookings.isEmpty {
+                newPage()
+                text("Flights & Hotels", font: .systemFont(ofSize: 22, weight: .bold), color: headerDark)
+                y += 16
 
-                for booking in sortedBookings {
-                    ensureSpace(80)
-                    _ = drawText("[\(booking.bookingType.label.uppercased())]", font: .systemFont(ofSize: 10, weight: .semibold), color: .gray)
-                    yOffset += 2
-                    _ = drawText(booking.title, font: .systemFont(ofSize: 14, weight: .semibold))
+                for bk in bookings {
+                    space(90)
 
-                    if !booking.confirmationCode.isEmpty {
-                        _ = drawText("Confirmation: \(booking.confirmationCode)", font: .monospacedSystemFont(ofSize: 11, weight: .regular), color: .darkGray)
+                    // Type badge pill
+                    let badgeStr = " \(bk.bookingType.label.uppercased()) "
+                    let badgeFont = UIFont.systemFont(ofSize: 8, weight: .bold)
+                    let bs = sizeOf(badgeStr, font: badgeFont)
+                    fillRect(CGRect(x: m, y: y, width: bs.width + 10, height: bs.height + 6), color: bookingColor(bk.bookingType), radius: 4)
+                    draw(badgeStr, at: CGPoint(x: m + 5, y: y + 3), font: badgeFont, color: .white)
+                    y += bs.height + 10
+
+                    text(bk.title, font: .systemFont(ofSize: 14, weight: .semibold), color: headerDark)
+
+                    if !bk.confirmationCode.isEmpty {
+                        text("Confirmation: \(bk.confirmationCode)", font: .monospacedSystemFont(ofSize: 11, weight: .medium), color: accentBlue)
                     }
 
-                    // Flight specifics
-                    if booking.bookingType == .flight {
-                        if let airline = booking.airline, !airline.isEmpty {
-                            _ = drawText("Airline: \(airline)", font: .systemFont(ofSize: 11), color: .darkGray)
+                    if bk.bookingType == .flight {
+                        if let al = bk.airline, !al.isEmpty { text("Airline: \(al)", font: .systemFont(ofSize: 11), color: subtitleGray) }
+                        if let dep = bk.departureAirport, let arr = bk.arrivalAirport, !dep.isEmpty, !arr.isEmpty {
+                            text("\(dep)  ✈  \(arr)", font: .systemFont(ofSize: 13, weight: .semibold), color: bodyText)
                         }
-                        if let dep = booking.departureAirport, let arr = booking.arrivalAirport {
-                            _ = drawText("\(dep) → \(arr)", font: .systemFont(ofSize: 11), color: .darkGray)
-                        }
-                        if let time = booking.departureTime {
-                            _ = drawText("Departs: \(dateFormatter.string(from: time)) \(timeFormatter.string(from: time))", font: .systemFont(ofSize: 11), color: .darkGray)
-                        }
-                        if let time = booking.arrivalTime {
-                            _ = drawText("Arrives: \(dateFormatter.string(from: time)) \(timeFormatter.string(from: time))", font: .systemFont(ofSize: 11), color: .darkGray)
-                        }
+                        if let t = bk.departureTime { text("Departs: \(dateFmt.string(from: t)) at \(timeFmt.string(from: t))", font: .systemFont(ofSize: 11), color: subtitleGray) }
+                        if let t = bk.arrivalTime { text("Arrives: \(dateFmt.string(from: t)) at \(timeFmt.string(from: t))", font: .systemFont(ofSize: 11), color: subtitleGray) }
                     }
 
-                    // Hotel specifics
-                    if booking.bookingType == .hotel {
-                        if let name = booking.hotelName, !name.isEmpty {
-                            _ = drawText("Hotel: \(name)", font: .systemFont(ofSize: 11), color: .darkGray)
-                        }
-                        if let addr = booking.hotelAddress, !addr.isEmpty {
-                            _ = drawText("Address: \(addr)", font: .systemFont(ofSize: 11), color: .darkGray)
-                        }
-                        if let checkIn = booking.checkInDate {
-                            _ = drawText("Check-in: \(dateFormatter.string(from: checkIn))", font: .systemFont(ofSize: 11), color: .darkGray)
-                        }
-                        if let checkOut = booking.checkOutDate {
-                            _ = drawText("Check-out: \(dateFormatter.string(from: checkOut))", font: .systemFont(ofSize: 11), color: .darkGray)
+                    if bk.bookingType == .hotel {
+                        if let n = bk.hotelName, !n.isEmpty { text(n, font: .systemFont(ofSize: 13, weight: .medium), color: bodyText) }
+                        if let a = bk.hotelAddress, !a.isEmpty { text(a, font: .systemFont(ofSize: 11), color: subtitleGray) }
+                        if let ci = bk.checkInDate, let co = bk.checkOutDate {
+                            let n = Calendar.current.dateComponents([.day], from: ci, to: co).day ?? 0
+                            text("Check-in: \(dateFmt.string(from: ci))  •  Check-out: \(dateFmt.string(from: co))  (\(n) night\(n == 1 ? "" : "s"))", font: .systemFont(ofSize: 11), color: subtitleGray)
                         }
                     }
 
-                    if !booking.notes.isEmpty {
-                        _ = drawText(booking.notes, font: .italicSystemFont(ofSize: 10), color: .gray)
+                    if bk.bookingType == .carRental {
+                        if let t = bk.departureTime { text("Pickup: \(dateFmt.string(from: t)) \(timeFmt.string(from: t))", font: .systemFont(ofSize: 11), color: subtitleGray) }
+                        if let t = bk.arrivalTime { text("Return: \(dateFmt.string(from: t)) \(timeFmt.string(from: t))", font: .systemFont(ofSize: 11), color: subtitleGray) }
                     }
 
-                    yOffset += 12
-                    drawDivider()
+                    if !bk.notes.isEmpty { text(bk.notes, font: .italicSystemFont(ofSize: 10), color: lightGray) }
+                    y += 8; divider()
                 }
+                footer()
             }
 
-            // === Itinerary Pages ===
-            let sortedDays = trip.days.sorted { $0.dayNumber < $1.dayNumber }
+            // ================================================================
+            // BUDGET & EXPENSES
+            // ================================================================
+            let expenses = trip.expenses.sorted { $0.dateIncurred < $1.dateIncurred }
+            if trip.budgetAmount > 0 || !expenses.isEmpty {
+                newPage()
+                text("Budget & Expenses", font: .systemFont(ofSize: 22, weight: .bold), color: headerDark)
+                y += 16
 
-            for day in sortedDays {
-                ensureSpace(60)
-                _ = drawText("Day \(day.dayNumber) — \(dateFormatter.string(from: day.date))", font: .systemFont(ofSize: 18, weight: .bold))
-                yOffset += 4
+                let total = expenses.reduce(0.0) { $0 + $1.amount }
+                let cf = NumberFormatter(); cf.numberStyle = .currency; cf.currencyCode = trip.budgetCurrencyCode
+
+                if trip.budgetAmount > 0 {
+                    let spent = cf.string(from: NSNumber(value: total)) ?? "$\(total)"
+                    let budget = cf.string(from: NSNumber(value: trip.budgetAmount)) ?? "$\(trip.budgetAmount)"
+                    text("\(spent) spent of \(budget)", font: .systemFont(ofSize: 14, weight: .semibold), color: headerDark)
+                    y += 8
+
+                    // Progress bar
+                    fillRect(CGRect(x: m, y: y, width: cw, height: 8), color: UIColor(red: 0.92, green: 0.93, blue: 0.94, alpha: 1.0), radius: 4)
+                    let ratio = min(total / trip.budgetAmount, 1.0)
+                    let barColor: UIColor = ratio < 0.75 ? UIColor(red: 0.20, green: 0.72, blue: 0.40, alpha: 1.0) : ratio < 0.90 ? UIColor(red: 0.92, green: 0.70, blue: 0.15, alpha: 1.0) : UIColor(red: 0.90, green: 0.25, blue: 0.20, alpha: 1.0)
+                    if ratio > 0 { fillRect(CGRect(x: m, y: y, width: cw * ratio, height: 8), color: barColor, radius: 4) }
+                    y += 14
+                    text(String(format: "%.0f%% used", ratio * 100), font: .systemFont(ofSize: 10, weight: .medium), color: subtitleGray)
+                    y += 12
+                } else {
+                    let spent = cf.string(from: NSNumber(value: total)) ?? "$\(total)"
+                    text("Total spent: \(spent)", font: .systemFont(ofSize: 14, weight: .semibold), color: headerDark)
+                    y += 12
+                }
+
+                // Category breakdown
+                let grouped = Dictionary(grouping: expenses, by: { $0.category })
+                if !grouped.isEmpty {
+                    divider()
+                    for cat in ExpenseCategory.allCases {
+                        guard let items = grouped[cat] else { continue }
+                        let catTotal = items.reduce(0.0) { $0 + $1.amount }
+                        let catStr = cf.string(from: NSNumber(value: catTotal)) ?? "$\(catTotal)"
+                        space(18)
+                        text("  \(cat.label):  \(catStr)", font: .systemFont(ofSize: 12, weight: .medium), color: bodyText)
+                        y += 2
+                    }
+                    y += 10
+                }
+
+                // Expense list
+                if !expenses.isEmpty {
+                    divider()
+                    for exp in expenses {
+                        space(20)
+                        let dateStr = shortFmt.string(from: exp.dateIncurred)
+                        let amtStr = cf.string(from: NSNumber(value: exp.amount)) ?? "$\(exp.amount)"
+                        let savedY = y
+                        text("\(dateStr)  •  \(exp.title)", font: .systemFont(ofSize: 11), color: bodyText, w: cw * 0.7)
+                        // Right-align amount on same starting line
+                        let as2 = sizeOf(amtStr, font: .monospacedDigitSystemFont(ofSize: 11, weight: .semibold))
+                        draw(amtStr, at: CGPoint(x: pw - m - as2.width, y: savedY), font: .monospacedDigitSystemFont(ofSize: 11, weight: .semibold), color: headerDark)
+                        y += 4
+                    }
+                }
+                footer()
+            }
+
+            // ================================================================
+            // ITINERARY
+            // ================================================================
+            let days = trip.days.sorted { $0.dayNumber < $1.dayNumber }
+
+            for day in days {
+                space(80)
+
+                // Day header card
+                let dh: CGFloat = 40
+                let dayColor = dayAccentColor(day.dayNumber)
+                fillRect(CGRect(x: m, y: y, width: cw, height: dh), color: dayColor.withAlphaComponent(0.08), radius: 8)
+
+                // Left accent bar
+                let leftBar = UIBezierPath(roundedRect: CGRect(x: m, y: y, width: 4, height: dh), byRoundingCorners: [.topLeft, .bottomLeft], cornerRadii: CGSize(width: 4, height: 4))
+                dayColor.setFill(); leftBar.fill()
+
+                draw("DAY \(day.dayNumber)", at: CGPoint(x: m + 16, y: y + 6), font: .systemFont(ofSize: 14, weight: .heavy), color: dayColor)
+                draw(shortFmt.string(from: day.date), at: CGPoint(x: m + 16, y: y + 23), font: .systemFont(ofSize: 11, weight: .regular), color: subtitleGray)
+
+                let scStr = "\(day.stops.count) stop\(day.stops.count == 1 ? "" : "s")"
+                let scSz = sizeOf(scStr, font: .systemFont(ofSize: 11, weight: .medium))
+                draw(scStr, at: CGPoint(x: pw - m - scSz.width - 12, y: y + 13), font: .systemFont(ofSize: 11, weight: .medium), color: lightGray)
+
+                y += dh + 12
 
                 if !day.notes.isEmpty {
-                    _ = drawText(day.notes, font: .italicSystemFont(ofSize: 11), color: .gray)
-                    yOffset += 4
+                    text(day.notes, font: .italicSystemFont(ofSize: 10), color: subtitleGray)
+                    y += 6
                 }
 
-                let sortedStops = day.stops.sorted { $0.sortOrder < $1.sortOrder }
-
-                if sortedStops.isEmpty {
-                    _ = drawText("No stops planned", font: .systemFont(ofSize: 11), color: .lightGray)
-                    yOffset += 8
+                let stops = day.stops.sorted { $0.sortOrder < $1.sortOrder }
+                if stops.isEmpty {
+                    text("No stops planned yet", font: .systemFont(ofSize: 11), color: lightGray)
+                    y += 6
                 } else {
-                    for stop in sortedStops {
-                        ensureSpace(50)
+                    for (idx, stop) in stops.enumerated() {
+                        space(55)
+                        let cc = catColors[stop.category] ?? lightGray
+                        let tx: CGFloat = m + 36
 
-                        // Category badge + name
-                        let catLabel = categoryLabel(stop.category)
-                        _ = drawText("• \(catLabel): \(stop.name)", font: .systemFont(ofSize: 13, weight: .medium))
+                        // Category color dot
+                        let dotRect = CGRect(x: m + 6, y: y + 4, width: 10, height: 10)
+                        fillRect(dotRect, color: cc, radius: 5)
 
                         // Time
-                        var timeStr = ""
-                        if let arrival = stop.arrivalTime {
-                            timeStr += timeFormatter.string(from: arrival)
-                        }
-                        if let departure = stop.departureTime {
-                            timeStr += timeStr.isEmpty ? timeFormatter.string(from: departure) : " – \(timeFormatter.string(from: departure))"
-                        }
-                        if !timeStr.isEmpty {
-                            _ = drawText("   \(timeStr)", font: .systemFont(ofSize: 10), color: .gray)
-                        }
+                        var ts = ""
+                        if let a = stop.arrivalTime { ts = timeFmt.string(from: a) }
+                        if let d = stop.departureTime { ts += ts.isEmpty ? timeFmt.string(from: d) : " – \(timeFmt.string(from: d))" }
+                        if !ts.isEmpty { text(ts, font: .systemFont(ofSize: 9, weight: .semibold), color: cc, x: tx, w: cw - 40) }
 
+                        // Name
+                        text(stop.name, font: .systemFont(ofSize: 13, weight: .semibold), color: headerDark, x: tx, w: cw - 40)
+
+                        // Category badge
+                        text(categoryLabel(stop.category), font: .systemFont(ofSize: 9, weight: .medium), color: cc, x: tx)
+
+                        // Notes
                         if !stop.notes.isEmpty {
-                            _ = drawText("   \(stop.notes)", font: .italicSystemFont(ofSize: 10), color: .gray)
+                            text(stop.notes, font: .italicSystemFont(ofSize: 9), color: subtitleGray, x: tx, w: cw - 40)
                         }
 
-                        yOffset += 6
+                        // Address
+                        if let addr = stop.address, !addr.isEmpty {
+                            text("📍 \(addr)", font: .systemFont(ofSize: 9), color: lightGray, x: tx, w: cw - 40)
+                        }
+
+                        y += 4
+
+                        // Dashed connector
+                        if idx < stops.count - 1 {
+                            let cx = m + 11
+                            ctx.cgContext.setStrokeColor(dividerColor.cgColor)
+                            ctx.cgContext.setLineWidth(1)
+                            ctx.cgContext.setLineDash(phase: 0, lengths: [3, 3])
+                            ctx.cgContext.move(to: CGPoint(x: cx, y: y))
+                            ctx.cgContext.addLine(to: CGPoint(x: cx, y: y + 6))
+                            ctx.cgContext.strokePath()
+                            ctx.cgContext.setLineDash(phase: 0, lengths: [])
+                            y += 8
+                        }
                     }
                 }
-
-                yOffset += 8
-                drawDivider()
+                y += 16
             }
 
-            // Footer on last page
-            yOffset += 20
-            ensureSpace(30)
-            _ = drawText("Generated by Travly", font: .systemFont(ofSize: 9), color: .lightGray)
-        }
+            // ================================================================
+            // CHECKLISTS
+            // ================================================================
+            let lists = trip.lists.sorted { $0.sortOrder < $1.sortOrder }.filter { !$0.items.isEmpty }
+            if !lists.isEmpty {
+                space(60)
+                divider()
+                text("Checklists", font: .systemFont(ofSize: 22, weight: .bold), color: headerDark)
+                y += 14
 
-        return data
+                for list in lists {
+                    space(28)
+                    let done = list.items.filter(\.isChecked).count
+                    text("\(list.name)  (\(done)/\(list.items.count))", font: .systemFont(ofSize: 13, weight: .semibold), color: headerDark)
+                    y += 4
+                    for item in list.items.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+                        space(18)
+                        let ck = item.isChecked ? "☑" : "☐"
+                        text("  \(ck)  \(item.text)", font: .systemFont(ofSize: 11), color: item.isChecked ? lightGray : bodyText)
+                        y += 1
+                    }
+                    y += 10
+                }
+            }
+
+            footer()
+        }
     }
+
+    // MARK: - Helpers
 
     private static func categoryLabel(_ category: StopCategory) -> String {
         switch category {
-        case .accommodation: return "Stay"
-        case .restaurant: return "Eat"
-        case .attraction: return "See"
-        case .transport: return "Transit"
-        case .activity: return "Do"
-        case .other: return "Other"
+        case .accommodation: "Stay"
+        case .restaurant: "Eat"
+        case .attraction: "See"
+        case .transport: "Transit"
+        case .activity: "Do"
+        case .other: "Other"
         }
+    }
+
+    private static func bookingColor(_ type: BookingType) -> UIColor {
+        switch type {
+        case .flight: UIColor(red: 0.20, green: 0.50, blue: 0.90, alpha: 1.0)
+        case .hotel: UIColor(red: 0.56, green: 0.27, blue: 0.85, alpha: 1.0)
+        case .carRental: UIColor(red: 0.92, green: 0.50, blue: 0.15, alpha: 1.0)
+        case .other: UIColor(red: 0.55, green: 0.57, blue: 0.62, alpha: 1.0)
+        }
+    }
+
+    private static func dayAccentColor(_ dayNumber: Int) -> UIColor {
+        let colors: [UIColor] = [
+            UIColor(red: 0.20, green: 0.40, blue: 0.85, alpha: 1.0),
+            UIColor(red: 0.20, green: 0.72, blue: 0.40, alpha: 1.0),
+            UIColor(red: 0.92, green: 0.50, blue: 0.15, alpha: 1.0),
+            UIColor(red: 0.56, green: 0.27, blue: 0.85, alpha: 1.0),
+            UIColor(red: 0.90, green: 0.30, blue: 0.55, alpha: 1.0),
+            UIColor(red: 0.85, green: 0.25, blue: 0.25, alpha: 1.0),
+            UIColor(red: 0.15, green: 0.65, blue: 0.65, alpha: 1.0),
+            UIColor(red: 0.30, green: 0.30, blue: 0.75, alpha: 1.0),
+        ]
+        return colors[(dayNumber - 1) % colors.count]
     }
 }
