@@ -448,16 +448,6 @@ struct TripDetailView: View {
                 moveStops(in: day, from: source, to: destination)
             }
 
-            if locatedStops.count >= 3 {
-                Button {
-                    optimizeRoute(day: day)
-                } label: {
-                    Label("Optimize Route", systemImage: "arrow.triangle.swap")
-                        .font(.subheadline)
-                        .foregroundStyle(.orange)
-                }
-            }
-
             Button {
                 selectedDayForStop = day
             } label: {
@@ -665,41 +655,4 @@ struct TripDetailView: View {
         ])
     }
 
-    // MARK: - Optimize Route
-
-    private func optimizeRoute(day: DayEntity) {
-        let stops = day.stops.sorted { $0.sortOrder < $1.sortOrder }
-            .filter { $0.latitude != 0 || $0.longitude != 0 }
-        guard stops.count >= 3 else { return }
-
-        // Nearest-neighbor optimization starting from first stop
-        var remaining = Array(stops.dropFirst())
-        var ordered: [StopEntity] = [stops[0]]
-
-        while !remaining.isEmpty {
-            let last = ordered.last!
-            let lastCoord = CLLocation(latitude: last.latitude, longitude: last.longitude)
-            var nearestIdx = 0
-            var nearestDist = Double.greatestFiniteMagnitude
-            for (i, stop) in remaining.enumerated() {
-                let d = lastCoord.distance(from: CLLocation(latitude: stop.latitude, longitude: stop.longitude))
-                if d < nearestDist {
-                    nearestDist = d
-                    nearestIdx = i
-                }
-            }
-            ordered.append(remaining.remove(at: nearestIdx))
-        }
-
-        // Update sort orders
-        for (index, stop) in ordered.enumerated() {
-            stop.sortOrder = index
-        }
-        // Update unlocated stops to be at the end
-        let unlocated = day.stops.filter { $0.latitude == 0 && $0.longitude == 0 }
-        for (i, stop) in unlocated.enumerated() {
-            stop.sortOrder = ordered.count + i
-        }
-        try? modelContext.save()
-    }
 }
