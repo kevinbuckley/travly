@@ -27,7 +27,12 @@ final class TripEntity {
     @Relationship(deleteRule: .cascade, inverse: \TripListEntity.trip)
     var lists: [TripListEntity]
 
+    @Relationship(deleteRule: .cascade, inverse: \ExpenseEntity.trip)
+    var expenses: [ExpenseEntity]
+
     var hasCustomDates: Bool
+    var budgetAmount: Double
+    var budgetCurrencyCode: String
 
     // MARK: Computed Properties
 
@@ -96,6 +101,9 @@ final class TripEntity {
         self.days = []
         self.bookings = []
         self.lists = []
+        self.expenses = []
         self.hasCustomDates = true
+        self.budgetAmount = 0
+        self.budgetCurrencyCode = "USD"
     }
 }

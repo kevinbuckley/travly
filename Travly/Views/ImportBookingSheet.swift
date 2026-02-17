@@ -177,6 +177,12 @@ struct ImportBookingSheet: View {
         try? modelContext.save()
         addedCount = parsedBookings.count
         parsedBookings = []
+
+        // Auto-dismiss after a brief moment so user sees success
+        Task {
+            try? await Task.sleep(for: .seconds(1))
+            await MainActor.run { dismiss() }
+        }
     }
 }
 

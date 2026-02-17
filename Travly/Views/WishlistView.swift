@@ -373,6 +373,12 @@ struct AddWishlistToTripSheet: View {
         stop.website = item.website
         try? modelContext.save()
         added = true
+
+        // Auto-dismiss after showing success
+        Task {
+            try? await Task.sleep(for: .seconds(1))
+            await MainActor.run { dismiss() }
+        }
     }
 }
 
