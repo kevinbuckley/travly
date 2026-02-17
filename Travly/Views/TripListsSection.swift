@@ -8,6 +8,7 @@ struct TripListsSection: View {
     @State private var showingAddList = false
     @State private var newListName = ""
     @State private var newItemTexts: [UUID: String] = [:]
+    @State private var listToDelete: TripListEntity?
 
     private var sortedLists: [TripListEntity] {
         trip.lists.sorted { $0.sortOrder < $1.sortOrder }
@@ -44,6 +45,23 @@ struct TripListsSection: View {
             }
         } header: {
             Text("Lists")
+        }
+        .alert("Delete List?", isPresented: Binding(
+            get: { listToDelete != nil },
+            set: { if !$0 { listToDelete = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let list = listToDelete {
+                    modelContext.delete(list)
+                    try? modelContext.save()
+                    listToDelete = nil
+                }
+            }
+            Button("Cancel", role: .cancel) { listToDelete = nil }
+        } message: {
+            if let list = listToDelete {
+                Text("Delete \"\(list.name)\" and all its items? This cannot be undone.")
+            }
         }
     }
 
@@ -102,8 +120,7 @@ struct TripListsSection: View {
                         .foregroundStyle(.secondary)
                 }
                 Button(role: .destructive) {
-                    modelContext.delete(list)
-                    try? modelContext.save()
+                    listToDelete = list
                 } label: {
                     Image(systemName: "trash")
                         .font(.caption)

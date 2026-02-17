@@ -736,6 +736,12 @@ struct PasteItinerarySheet: View {
                 geocodingInProgress = false
             }
         }
+
+        // Auto-dismiss after a brief moment so user sees success
+        Task {
+            try? await Task.sleep(for: .seconds(1))
+            await MainActor.run { dismiss() }
+        }
     }
 
     private func geocodeStops(_ stops: [(StopEntity, String)]) async {

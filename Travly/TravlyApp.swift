@@ -9,7 +9,7 @@ struct TravlyApp: App {
     private let containerError: String?
 
     init() {
-        let schema = Schema([TripEntity.self, DayEntity.self, StopEntity.self, CommentEntity.self, BookingEntity.self, WishlistItemEntity.self, TripListEntity.self, TripListItemEntity.self])
+        let schema = Schema([TripEntity.self, DayEntity.self, StopEntity.self, CommentEntity.self, BookingEntity.self, WishlistItemEntity.self, TripListEntity.self, TripListItemEntity.self, ExpenseEntity.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {

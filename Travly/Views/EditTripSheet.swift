@@ -19,6 +19,10 @@ struct EditTripSheet: View {
     @State private var showingDateChangeWarning = false
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var coverPhotoData: Data?
+    @State private var budgetText: String
+    @State private var budgetCurrency: String
+
+    private static let currencyOptions = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "MXN", "CNY", "KRW", "THB", "INR", "BRL"]
 
     init(trip: TripEntity) {
         self.trip = trip
@@ -28,6 +32,8 @@ struct EditTripSheet: View {
         _endDate = State(initialValue: trip.endDate)
         _notes = State(initialValue: trip.notes)
         _status = State(initialValue: trip.status)
+        _budgetText = State(initialValue: trip.budgetAmount > 0 ? String(format: "%.0f", trip.budgetAmount) : "")
+        _budgetCurrency = State(initialValue: trip.budgetCurrencyCode)
     }
 
     private var isValid: Bool {
@@ -92,6 +98,25 @@ struct EditTripSheet: View {
                 }
 
                 Section {
+                    HStack {
+                        Text(currencySymbol)
+                            .foregroundStyle(.secondary)
+                        TextField("No budget", text: $budgetText)
+                            .keyboardType(.decimalPad)
+                    }
+                    Picker("Currency", selection: $budgetCurrency) {
+                        ForEach(Self.currencyOptions, id: \.self) { code in
+                            Text(code).tag(code)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                } header: {
+                    Text("Budget")
+                } footer: {
+                    Text("Leave blank for no budget. Expenses are tracked in the trip detail.")
+                }
+
+                Section {
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(3...6)
                 } header: {
@@ -125,6 +150,13 @@ struct EditTripSheet: View {
         }
     }
 
+    private var currencySymbol: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = budgetCurrency
+        return formatter.currencySymbol ?? "$"
+    }
+
     private func attemptSave() {
         let datesChanged = trip.startDate != startDate || trip.endDate != endDate
         let hasStops = trip.days.contains { !$0.stops.isEmpty }
@@ -144,6 +176,8 @@ struct EditTripSheet: View {
         trip.endDate = endDate
         trip.notes = notes.trimmingCharacters(in: .whitespaces)
         trip.status = status
+        trip.budgetAmount = Double(budgetText) ?? 0
+        trip.budgetCurrencyCode = budgetCurrency
 
         // Save photo identifier
         if let item = selectedPhotoItem {

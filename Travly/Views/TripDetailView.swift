@@ -50,6 +50,9 @@ struct TripDetailView: View {
             // MARK: - Bookings
             bookingsSection
 
+            // MARK: - Budget
+            BudgetSection(trip: trip)
+
             // MARK: - Paste Itinerary
             pasteItinerarySection
 
@@ -401,6 +404,24 @@ struct TripDetailView: View {
                 NavigationLink(destination: StopDetailView(stop: stop)) {
                     StopRowView(stop: stop)
                 }
+                .contextMenu {
+                    if sortedDays.count > 1 {
+                        Menu("Move to...") {
+                            ForEach(sortedDays.filter { $0.id != day.id }) { targetDay in
+                                Button {
+                                    moveStopToDay(stop, targetDay: targetDay)
+                                } label: {
+                                    Label("Day \(targetDay.dayNumber) — \(targetDay.formattedDate)", systemImage: "arrow.right")
+                                }
+                            }
+                        }
+                    }
+                    Button(role: .destructive) {
+                        stopToDelete = stop
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
 
                 // Show travel time between consecutive stops
                 if index < sortedStops.count - 1 {
@@ -533,6 +554,11 @@ struct TripDetailView: View {
     private func moveStops(in day: DayEntity, from source: IndexSet, to destination: Int) {
         let manager = DataManager(modelContext: modelContext)
         manager.reorderStops(in: day, from: source, to: destination)
+    }
+
+    private func moveStopToDay(_ stop: StopEntity, targetDay: DayEntity) {
+        let manager = DataManager(modelContext: modelContext)
+        manager.moveStop(stop, to: targetDay)
     }
 
     // MARK: - Share

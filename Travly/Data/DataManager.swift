@@ -120,12 +120,54 @@ final class DataManager {
         try? modelContext.save()
     }
 
+    func moveStop(_ stop: StopEntity, to targetDay: DayEntity) {
+        if let currentDay = stop.day {
+            currentDay.stops.removeAll { $0.id == stop.id }
+        }
+        stop.sortOrder = targetDay.stops.count
+        stop.day = targetDay
+        targetDay.stops.append(stop)
+        try? modelContext.save()
+    }
+
     func reorderStops(in day: DayEntity, from source: IndexSet, to destination: Int) {
         var stops = day.stops.sorted { $0.sortOrder < $1.sortOrder }
         stops.move(fromOffsets: source, toOffset: destination)
         for (index, stop) in stops.enumerated() {
             stop.sortOrder = index
         }
+        try? modelContext.save()
+    }
+
+    // MARK: - Expenses
+
+    @discardableResult
+    func addExpense(
+        to trip: TripEntity,
+        title: String,
+        amount: Double,
+        category: ExpenseCategory = .other,
+        date: Date = Date(),
+        notes: String = ""
+    ) -> ExpenseEntity {
+        let expense = ExpenseEntity(
+            title: title,
+            amount: amount,
+            currencyCode: trip.budgetCurrencyCode,
+            dateIncurred: date,
+            category: category,
+            notes: notes,
+            sortOrder: trip.expenses.count
+        )
+        expense.trip = trip
+        trip.expenses.append(expense)
+        modelContext.insert(expense)
+        try? modelContext.save()
+        return expense
+    }
+
+    func deleteExpense(_ expense: ExpenseEntity) {
+        modelContext.delete(expense)
         try? modelContext.save()
     }
 

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import MapKit
 import TripCore
 
 struct EditStopSheet: View {
@@ -16,6 +17,10 @@ struct EditStopSheet: View {
     @State private var arrivalTime: Date
     @State private var useDepartureTime: Bool
     @State private var departureTime: Date
+    @State private var latitude: Double
+    @State private var longitude: Double
+    @State private var locationName: String
+    @State private var locationCity: String
 
     init(stop: StopEntity) {
         self.stop = stop
@@ -26,10 +31,18 @@ struct EditStopSheet: View {
         _arrivalTime = State(initialValue: stop.arrivalTime ?? Date())
         _useDepartureTime = State(initialValue: stop.departureTime != nil)
         _departureTime = State(initialValue: stop.departureTime ?? Date())
+        _latitude = State(initialValue: stop.latitude)
+        _longitude = State(initialValue: stop.longitude)
+        _locationName = State(initialValue: stop.name)
+        _locationCity = State(initialValue: "")
     }
 
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private var hasLocation: Bool {
+        latitude != 0 || longitude != 0
     }
 
     var body: some View {
@@ -40,6 +53,37 @@ struct EditStopSheet: View {
                     CategoryPicker(selection: $category)
                 } header: {
                     Text("Details")
+                }
+
+                Section {
+                    if hasLocation {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text(locationName.isEmpty ? String(format: "%.4f, %.4f", latitude, longitude) : locationName)
+                                .font(.subheadline)
+                            Spacer()
+                            Button("Clear") {
+                                latitude = 0
+                                longitude = 0
+                                locationName = ""
+                            }
+                            .font(.caption)
+                            .foregroundColor(.red)
+                        }
+                    }
+                    LocationSearchView(
+                        selectedName: $locationName,
+                        selectedLatitude: $latitude,
+                        selectedLongitude: $longitude,
+                        selectedCity: $locationCity
+                    )
+                    .listRowInsets(EdgeInsets())
+                } header: {
+                    Text("Location")
+                } footer: {
+                    Text("Search to update the location, or clear to remove it.")
+                        .font(.caption2)
                 }
 
                 Section {
@@ -87,12 +131,47 @@ struct EditStopSheet: View {
     }
 
     private func saveChanges() {
+        let locationChanged = (latitude != stop.latitude || longitude != stop.longitude)
+
         stop.name = name.trimmingCharacters(in: .whitespaces)
         stop.category = category
         stop.notes = notes.trimmingCharacters(in: .whitespaces)
         stop.arrivalTime = useArrivalTime ? arrivalTime : nil
         stop.departureTime = useDepartureTime ? departureTime : nil
+        stop.latitude = latitude
+        stop.longitude = longitude
         try? modelContext.save()
+
+        // Re-populate place details if location changed
+        if locationChanged && (latitude != 0 || longitude != 0) {
+            Task {
+                await populatePlaceDetails()
+            }
+        }
+
         dismiss()
+    }
+
+    private func populatePlaceDetails() async {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = stop.name
+        request.region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude),
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+        let search = MKLocalSearch(request: request)
+        do {
+            let response = try await search.start()
+            if let item = response.mapItems.first {
+                await MainActor.run {
+                    stop.phone = item.phoneNumber
+                    if let url = item.url { stop.website = url.absoluteString }
+                    let pm = item.placemark
+                    let parts = [pm.subThoroughfare, pm.thoroughfare, pm.locality, pm.administrativeArea, pm.postalCode].compactMap { $0 }
+                    if !parts.isEmpty { stop.address = parts.joined(separator: ", ") }
+                    try? modelContext.save()
+                }
+            }
+        } catch { }
     }
 }
