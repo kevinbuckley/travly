@@ -28,6 +28,8 @@ struct TripDetailView: View {
     @State private var calendarExportMessage: String?
     @State private var showingCalendarResult = false
     @State private var isExportingCalendar = false
+    @State private var draggingStopID: String?
+    @State private var dropTargetDayID: UUID?
 
     private var sortedDays: [DayEntity] {
         trip.days.sorted { $0.dayNumber < $1.dayNumber }
@@ -540,6 +542,13 @@ struct TripDetailView: View {
                 NavigationLink(destination: StopDetailView(stop: stop)) {
                     StopRowView(stop: stop)
                 }
+                .draggable(stop.id.uuidString) {
+                    // Preview shown while dragging
+                    Label(stop.name, systemImage: "mappin.circle.fill")
+                        .padding(8)
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                        .onAppear { draggingStopID = stop.id.uuidString }
+                }
                 .contextMenu {
                     if sortedDays.count > 1 {
                         Menu("Move to...") {
@@ -600,6 +609,11 @@ struct TripDetailView: View {
                 Text("Day \(day.dayNumber)")
                     .fontWeight(.semibold)
                 Spacer()
+                if dropTargetDayID == day.id {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .foregroundStyle(.blue)
+                        .transition(.scale.combined(with: .opacity))
+                }
                 if !day.location.isEmpty && locationSegments.count <= 1 {
                     Text(day.location)
                         .font(.caption)
@@ -610,6 +624,19 @@ struct TripDetailView: View {
                     .foregroundStyle(.secondary)
             }
             .contentShape(Rectangle())
+            .dropDestination(for: String.self) { items, _ in
+                guard let uuidString = items.first,
+                      let stop = findStop(byID: uuidString),
+                      stop.day?.id != day.id else { return false }
+                moveStopToDay(stop, targetDay: day)
+                draggingStopID = nil
+                dropTargetDayID = nil
+                return true
+            } isTargeted: { isTargeted in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    dropTargetDayID = isTargeted ? day.id : (dropTargetDayID == day.id ? nil : dropTargetDayID)
+                }
+            }
             .contextMenu {
                 Button {
                     dayForLocationEdit = day
@@ -698,6 +725,11 @@ struct TripDetailView: View {
     private func moveStopToDay(_ stop: StopEntity, targetDay: DayEntity) {
         let manager = DataManager(modelContext: modelContext)
         manager.moveStop(stop, to: targetDay)
+    }
+
+    private func findStop(byID uuidString: String) -> StopEntity? {
+        guard let uuid = UUID(uuidString: uuidString) else { return nil }
+        return sortedDays.flatMap(\.stops).first { $0.id == uuid }
     }
 
     // MARK: - Share
