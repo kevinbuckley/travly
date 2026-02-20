@@ -16,6 +16,10 @@ enum ShareSheet {
         presentActivity(items: [text])
     }
 
+    @MainActor static func shareTripFile(_ fileURL: URL) {
+        presentActivity(items: [fileURL])
+    }
+
     @MainActor private static func presentActivity(items: [Any]) {
         let activityVC = UIActivityViewController(
             activityItems: items,
