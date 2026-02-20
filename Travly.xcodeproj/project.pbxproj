@@ -133,6 +133,7 @@
 		BB62F1AFC14FA36E7D62D9E3 /* PhotoLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryService.swift; sourceTree = "<group>"; };
 		C58481E88E2245E626418382 /* TripRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripRowView.swift; sourceTree = "<group>"; };
 		C646145A462D83ACD7E63623 /* TripPDFGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPDFGenerator.swift; sourceTree = "<group>"; };
+		C7330855EE4666BF054B6AD0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C7872672C3AACA99843386C6 /* AddExpenseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExpenseSheet.swift; sourceTree = "<group>"; };
 		C8A2971B11387C911B5AB2AB /* StopEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopEntity.swift; sourceTree = "<group>"; };
 		CF9273BE664BF1CD78E5BE4E /* TravelTimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTimeService.swift; sourceTree = "<group>"; };
@@ -225,6 +226,7 @@
 			children = (
 				4E94BF365586F3C6938B520A /* Assets.xcassets */,
 				B9507EB4177C2F087C5318FC /* ContentView.swift */,
+				C7330855EE4666BF054B6AD0 /* Info.plist */,
 				E0E419B638C5716A0768E874 /* Travly.entitlements */,
 				81D52F71969034C036E68087 /* TravlyApp.swift */,
 				5EF4CE4A6C4242716EFEE1C3 /* Data */,
@@ -486,11 +488,11 @@
 				CODE_SIGN_ENTITLEMENTS = Travly/Travly.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = A6VYGLF4DB;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Travly/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Travly;
-				INFOPLIST_KEY_CFBundleDocumentTypes = "( { CFBundleTypeName = \"Travly Trip\"; LSHandlerRank = Owner; LSItemContentTypes = (\"com.kevinbuckley.travelplanner.trip\"); } )";
 				INFOPLIST_KEY_CFBundleShortVersionString = 1.1;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Travly can add your trip days to your calendar so you can see your itinerary alongside other events.";
@@ -500,7 +502,6 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UTExportedTypeDeclarations = "( { UTTypeConformsTo = (\"public.json\", \"public.data\"); UTTypeDescription = \"Travly Trip\"; UTTypeIdentifier = \"com.kevinbuckley.travelplanner.trip\"; UTTypeTagSpecification = { \"public.filename-extension\" = (travly); }; } )";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -520,11 +521,11 @@
 				CODE_SIGN_ENTITLEMENTS = Travly/Travly.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = A6VYGLF4DB;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Travly/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Travly;
-				INFOPLIST_KEY_CFBundleDocumentTypes = "( { CFBundleTypeName = \"Travly Trip\"; LSHandlerRank = Owner; LSItemContentTypes = (\"com.kevinbuckley.travelplanner.trip\"); } )";
 				INFOPLIST_KEY_CFBundleShortVersionString = 1.1;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Travly can add your trip days to your calendar so you can see your itinerary alongside other events.";
@@ -534,7 +535,6 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UTExportedTypeDeclarations = "( { UTTypeConformsTo = (\"public.json\", \"public.data\"); UTTypeDescription = \"Travly Trip\"; UTTypeIdentifier = \"com.kevinbuckley.travelplanner.trip\"; UTTypeTagSpecification = { \"public.filename-extension\" = (travly); }; } )";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
