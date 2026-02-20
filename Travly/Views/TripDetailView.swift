@@ -101,6 +101,12 @@ struct TripDetailView: View {
                 HStack(spacing: 16) {
                     Menu {
                         Button {
+                            shareTripFile()
+                        } label: {
+                            Label("Share Trip", systemImage: "paperplane")
+                        }
+                        Divider()
+                        Button {
                             shareTripPDF()
                         } label: {
                             Label("Share as PDF", systemImage: "doc.richtext")
@@ -748,6 +754,15 @@ struct TripDetailView: View {
     }
 
     // MARK: - Share
+
+    private func shareTripFile() {
+        do {
+            let fileURL = try TripShareService.exportTrip(trip)
+            ShareSheet.shareTripFile(fileURL)
+        } catch {
+            // Export failed silently — user can retry
+        }
+    }
 
     private func shareTripPDF() {
         let data = TripPDFGenerator.generatePDF(for: trip)
