@@ -7,7 +7,6 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
-				<string>public.json</string>
 				<string>public.data</string>
 			</array>
 			<key>UTTypeDescription</key>

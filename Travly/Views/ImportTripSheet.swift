@@ -5,6 +5,7 @@ struct ImportTripSheet: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     let transfer: TripTransfer
 
@@ -83,6 +84,8 @@ struct ImportTripSheet: View {
     private func importTrip() {
         isImporting = true
         TripShareService.importTrip(transfer, into: modelContext)
+        try? modelContext.save()
+        hasCompletedOnboarding = true
         dismiss()
     }
 }
