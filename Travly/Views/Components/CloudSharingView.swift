@@ -126,18 +126,43 @@ class CloudSharingHostController: UIViewController, UIAdaptivePresentationContro
         if let existingShare = sharingService.existingShare(for: trip) {
             controller = UICloudSharingController(share: existingShare, container: persistence.cloudContainer)
         } else {
-            controller = UICloudSharingController { [weak self] _, prepareHandler in
-                guard let self else { return }
-                Task {
-                    do {
-                        let share = try await self.sharingService.shareTrip(self.trip)
-                        share[CKShare.SystemFieldKey.title] = self.trip.wrappedName
-                        prepareHandler(share, self.persistence.cloudContainer, nil)
-                    } catch {
-                        prepareHandler(nil, nil, error)
-                    }
+            // Pre-create the share BEFORE presenting the controller so the
+            // preparation handler never needs to await on the main thread.
+            // UICloudSharingController's prep closure runs on the main thread;
+            // calling `container.share()` (which also needs main-thread Core Data
+            // access) from an async Task inside that closure causes a deadlock/freeze.
+            let tripRef = trip!
+            let sharingRef = sharingService!
+            let persistenceRef = persistence!
+
+            // Show a temporary spinner while the share is being created
+            let spinner = UIActivityIndicatorView(style: .large)
+            spinner.center = view.center
+            spinner.startAnimating()
+            view.addSubview(spinner)
+
+            Task { @MainActor in
+                do {
+                    let share = try await sharingRef.shareTrip(tripRef)
+                    share[CKShare.SystemFieldKey.title] = tripRef.wrappedName
+
+                    spinner.removeFromSuperview()
+
+                    // Now present with the pre-created share (no async in the callback)
+                    let sharingController = UICloudSharingController(share: share, container: persistenceRef.cloudContainer)
+                    sharingController.delegate = self.coordinator
+                    sharingController.availablePermissions = [.allowPublic, .allowPrivate, .allowReadOnly, .allowReadWrite]
+                    sharingController.modalPresentationStyle = .formSheet
+                    sharingController.presentationController?.delegate = self
+
+                    self.present(sharingController, animated: true)
+                } catch {
+                    spinner.removeFromSuperview()
+                    print("Failed to create share: \(error)")
+                    self.onDismiss?()
                 }
             }
+            return
         }
 
         controller.delegate = coordinator
