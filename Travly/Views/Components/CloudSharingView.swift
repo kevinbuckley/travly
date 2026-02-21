@@ -3,6 +3,8 @@ import CloudKit
 import CoreData
 
 /// Wraps `UICloudSharingController` for SwiftUI presentation.
+/// Uses a transparent hosting controller to present the sharing UI
+/// directly from UIKit, avoiding the empty-sheet SwiftUI issue.
 struct CloudSharingView: UIViewControllerRepresentable {
 
     let trip: TripEntity
@@ -11,33 +13,16 @@ struct CloudSharingView: UIViewControllerRepresentable {
 
     @Environment(\.dismiss) private var dismiss
 
-    func makeUIViewController(context: Context) -> UICloudSharingController {
-        let controller: UICloudSharingController
-
-        if let existingShare = sharingService.existingShare(for: trip) {
-            // Already shared — manage participants
-            controller = UICloudSharingController(share: existingShare, container: persistence.cloudContainer)
-        } else {
-            // New share — create one
-            controller = UICloudSharingController { _, prepareHandler in
-                Task {
-                    do {
-                        let share = try await sharingService.shareTrip(trip)
-                        share[CKShare.SystemFieldKey.title] = trip.wrappedName
-                        prepareHandler(share, persistence.cloudContainer, nil)
-                    } catch {
-                        prepareHandler(nil, nil, error)
-                    }
-                }
-            }
-        }
-
-        controller.delegate = context.coordinator
-        controller.availablePermissions = [.allowPublic, .allowPrivate, .allowReadOnly, .allowReadWrite]
-        return controller
+    func makeUIViewController(context: Context) -> CloudSharingHostController {
+        let host = CloudSharingHostController()
+        host.trip = trip
+        host.persistence = persistence
+        host.sharingService = sharingService
+        host.coordinator = context.coordinator
+        return host
     }
 
-    func updateUIViewController(_ uiViewController: UICloudSharingController, context: Context) {}
+    func updateUIViewController(_ uiViewController: CloudSharingHostController, context: Context) {}
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -65,6 +50,7 @@ struct CloudSharingView: UIViewControllerRepresentable {
                let store = parent.persistence.privatePersistentStore {
                 parent.persistence.container.persistUpdatedShare(share, in: store)
             }
+            parent.dismiss()
         }
 
         func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
@@ -79,6 +65,7 @@ struct CloudSharingView: UIViewControllerRepresentable {
                     }
                 }
             }
+            parent.dismiss()
         }
 
         func itemTitle(for csc: UICloudSharingController) -> String? {
@@ -88,5 +75,53 @@ struct CloudSharingView: UIViewControllerRepresentable {
         func itemThumbnailData(for csc: UICloudSharingController) -> Data? {
             nil
         }
+    }
+}
+
+// MARK: - Host Controller
+
+/// A transparent view controller that presents UICloudSharingController
+/// directly via UIKit to avoid SwiftUI sheet rendering issues.
+class CloudSharingHostController: UIViewController {
+
+    var trip: TripEntity!
+    var persistence: PersistenceController!
+    var sharingService: CloudKitSharingService!
+    var coordinator: CloudSharingView.Coordinator!
+
+    private var didPresent = false
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        guard !didPresent else { return }
+        didPresent = true
+        presentSharingController()
+    }
+
+    private func presentSharingController() {
+        let controller: UICloudSharingController
+
+        if let existingShare = sharingService.existingShare(for: trip) {
+            controller = UICloudSharingController(share: existingShare, container: persistence.cloudContainer)
+        } else {
+            controller = UICloudSharingController { [weak self] _, prepareHandler in
+                guard let self else { return }
+                Task {
+                    do {
+                        let share = try await self.sharingService.shareTrip(self.trip)
+                        share[CKShare.SystemFieldKey.title] = self.trip.wrappedName
+                        prepareHandler(share, self.persistence.cloudContainer, nil)
+                    } catch {
+                        prepareHandler(nil, nil, error)
+                    }
+                }
+            }
+        }
+
+        controller.delegate = coordinator
+        controller.availablePermissions = [.allowPublic, .allowPrivate, .allowReadOnly, .allowReadWrite]
+        controller.modalPresentationStyle = .formSheet
+
+        present(controller, animated: true)
     }
 }
