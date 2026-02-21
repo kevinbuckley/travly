@@ -2,139 +2,109 @@ import SwiftUI
 import CloudKit
 import CoreData
 
-struct CloudSharingView: UIViewControllerRepresentable {
+// MARK: - Present UICloudSharingController from pure UIKit
 
-    let share: CKShare
-    let persistence: PersistenceController
-    let sharingService: CloudKitSharingService
-    @Environment(\.dismiss) private var dismiss
+/// Presents UICloudSharingController directly from UIKit's view controller hierarchy,
+/// bypassing UIViewControllerRepresentable which has known bugs with the preparationHandler.
+enum CloudSharingPresenter {
 
-    func makeUIViewController(context: Context) -> CloudSharingHostController {
-        let host = CloudSharingHostController()
-        host.share = share
-        host.persistence = persistence
-        host.sharingService = sharingService
-        host.coordinator = context.coordinator
-        host.onDismiss = { dismiss() }
-        return host
-    }
+    /// Present the sharing UI for a trip.
+    /// For NEW shares, uses the preparationHandler initializer presented from pure UIKit.
+    /// For EXISTING shares, uses the share:container: initializer.
+    static func present(
+        trip: TripEntity,
+        persistence: PersistenceController,
+        sharingService: CloudKitSharingService
+    ) {
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene }).first,
+              let rootVC = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController
+        else { return }
 
-    func updateUIViewController(_ uiViewController: CloudSharingHostController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    // MARK: - Coordinator (UICloudSharingControllerDelegate)
-
-    class Coordinator: NSObject, UICloudSharingControllerDelegate {
-
-        let parent: CloudSharingView
-
-        init(_ parent: CloudSharingView) {
-            self.parent = parent
+        // Walk to the topmost presented controller
+        var topVC = rootVC
+        while let presented = topVC.presentedViewController {
+            topVC = presented
         }
 
-        func cloudSharingController(
-            _ csc: UICloudSharingController,
-            failedToSaveShareWithError error: Error
-        ) {
-            print("[SHARE] failedToSaveShareWithError: \(error)")
-        }
+        let delegate = SharingDelegate(persistence: persistence)
 
-        func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {
-            if let share = csc.share, let store = parent.persistence.privatePersistentStore {
-                parent.persistence.container.persistUpdatedShare(share, in: store)
-            }
-        }
+        let controller: UICloudSharingController
+        if let existingShare = sharingService.existingShare(for: trip) {
+            // Existing share — present directly
+            controller = UICloudSharingController(
+                share: existingShare,
+                container: persistence.cloudContainer
+            )
+        } else {
+            // New share — use preparationHandler.
+            // This works correctly when presented from pure UIKit.
+            let container = persistence.container
+            let tripToShare = trip
 
-        func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
-            if let share = csc.share,
-               let store = parent.persistence.privatePersistentStore {
-                parent.persistence.container.purgeObjectsAndRecordsInZone(
-                    with: share.recordID.zoneID,
-                    in: store
-                ) { _, error in
-                    if let error {
-                        print("[SHARE] purge error: \(error)")
+            controller = UICloudSharingController { sharingController, preparationCompletionHandler in
+                container.share([tripToShare], to: nil) { objectIDs, share, ckContainer, error in
+                    if let share {
+                        share[CKShare.SystemFieldKey.title] = tripToShare.wrappedName
                     }
+                    preparationCompletionHandler(share, ckContainer, error)
                 }
             }
         }
 
-        func itemTitle(for csc: UICloudSharingController) -> String? {
-            csc.share?.value(forKey: CKShare.SystemFieldKey.title) as? String
-        }
-
-        func itemThumbnailData(for csc: UICloudSharingController) -> Data? { nil }
-    }
-}
-
-// MARK: - Clear Background
-
-struct ClearBackgroundView: UIViewRepresentable {
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
-        DispatchQueue.main.async {
-            view.superview?.superview?.backgroundColor = .clear
-        }
-        return view
-    }
-    func updateUIView(_ uiView: UIView, context: Context) {}
-}
-
-// MARK: - Host Controller
-
-class CloudSharingHostController: UIViewController, UIAdaptivePresentationControllerDelegate {
-
-    var share: CKShare!
-    var persistence: PersistenceController!
-    var sharingService: CloudKitSharingService!
-    var coordinator: CloudSharingView.Coordinator!
-    var onDismiss: (() -> Void)?
-
-    private var didPresent = false
-    private var isDismissing = false
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .clear
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        if !didPresent {
-            didPresent = true
-            presentSharingController()
-        } else {
-            // Sharing controller was dismissed — clean up
-            dismissIfNeeded()
-        }
-    }
-
-    private func presentSharingController() {
-        // Always use the share:container: initializer.
-        // The share was already created before this view was presented.
-        let controller = UICloudSharingController(
-            share: share,
-            container: persistence.cloudContainer
-        )
-        controller.delegate = coordinator
+        controller.delegate = delegate
         controller.availablePermissions = [.allowPublic, .allowPrivate, .allowReadOnly, .allowReadWrite]
         controller.modalPresentationStyle = .formSheet
-        controller.presentationController?.delegate = self
-        present(controller, animated: true)
+
+        // Keep the delegate alive until the controller is dismissed
+        objc_setAssociatedObject(controller, &SharingDelegate.associatedKey, delegate, .OBJC_ASSOCIATION_RETAIN)
+
+        topVC.present(controller, animated: true)
+    }
+}
+
+// MARK: - Sharing Delegate
+
+private class SharingDelegate: NSObject, UICloudSharingControllerDelegate {
+
+    static var associatedKey: UInt8 = 0
+
+    let persistence: PersistenceController
+
+    init(persistence: PersistenceController) {
+        self.persistence = persistence
     }
 
-    private func dismissIfNeeded() {
-        guard !isDismissing else { return }
-        isDismissing = true
-        onDismiss?()
+    func cloudSharingController(
+        _ csc: UICloudSharingController,
+        failedToSaveShareWithError error: Error
+    ) {
+        print("[SHARE] failedToSaveShareWithError: \(error)")
     }
 
-    // MARK: - UIAdaptivePresentationControllerDelegate
-
-    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
-        dismissIfNeeded()
+    func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {
+        if let share = csc.share, let store = persistence.privatePersistentStore {
+            persistence.container.persistUpdatedShare(share, in: store)
+        }
     }
+
+    func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
+        if let share = csc.share,
+           let store = persistence.privatePersistentStore {
+            persistence.container.purgeObjectsAndRecordsInZone(
+                with: share.recordID.zoneID,
+                in: store
+            ) { _, error in
+                if let error {
+                    print("[SHARE] purge error: \(error)")
+                }
+            }
+        }
+    }
+
+    func itemTitle(for csc: UICloudSharingController) -> String? {
+        csc.share?.value(forKey: CKShare.SystemFieldKey.title) as? String
+    }
+
+    func itemThumbnailData(for csc: UICloudSharingController) -> Data? { nil }
 }

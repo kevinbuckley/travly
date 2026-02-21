@@ -1,6 +1,5 @@
 import SwiftUI
 import CoreData
-import CloudKit
 import MapKit
 import CoreLocation
 import TripCore
@@ -31,11 +30,6 @@ struct TripDetailView: View {
     @State private var isExportingCalendar = false
     @State private var draggingStopID: String?
     @State private var dropTargetDayID: UUID?
-    @State private var showingCloudSharing = false
-    @State private var activeShare: CKShare?
-    @State private var isPreparingShare = false
-    @State private var shareError: String?
-    @State private var showingShareError = false
 
     private let sharingService = CloudKitSharingService()
 
@@ -133,15 +127,6 @@ struct TripDetailView: View {
             if let message = calendarExportMessage {
                 Text(message)
             }
-        }
-        .fullScreenCover(isPresented: $showingCloudSharing, onDismiss: { activeShare = nil }) {
-            sharingCoverContent
-        }
-        .overlay { sharingOverlay }
-        .alert("Sharing Error", isPresented: $showingShareError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(shareError ?? "Unknown error")
         }
         .sheet(isPresented: $showingEditTrip) {
             EditTripSheet(trip: trip)
@@ -250,14 +235,17 @@ struct TripDetailView: View {
             HStack(spacing: 16) {
                 Menu {
                     Button {
-                        prepareAndShowSharing()
+                        CloudSharingPresenter.present(
+                            trip: trip,
+                            persistence: PersistenceController.shared,
+                            sharingService: sharingService
+                        )
                     } label: {
                         Label(
                             sharingService.isShared(trip) ? "Manage Sharing" : "Collaborate",
                             systemImage: "person.crop.circle.badge.plus"
                         )
                     }
-                    .disabled(isPreparingShare)
                     Divider()
                     Button {
                         shareTripFile()
@@ -844,65 +832,6 @@ struct TripDetailView: View {
     private func findStop(byID uuidString: String) -> StopEntity? {
         guard let uuid = UUID(uuidString: uuidString) else { return nil }
         return sortedDays.flatMap(\.stopsArray).first { $0.id == uuid }
-    }
-
-    // MARK: - CloudKit Sharing
-
-    @ViewBuilder
-    private var sharingCoverContent: some View {
-        if let share = activeShare {
-            CloudSharingView(
-                share: share,
-                persistence: PersistenceController.shared,
-                sharingService: sharingService
-            )
-            .background(ClearBackgroundView())
-        }
-    }
-
-    @ViewBuilder
-    private var sharingOverlay: some View {
-        if isPreparingShare {
-            Color.black.opacity(0.3)
-                .ignoresSafeArea()
-                .overlay {
-                    ProgressView("Preparing share...")
-                        .padding(24)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                }
-        }
-    }
-
-    private func prepareAndShowSharing() {
-        // If share already exists, show the sharing UI immediately
-        if let existing = sharingService.existingShare(for: trip) {
-            activeShare = existing
-            showingCloudSharing = true
-            return
-        }
-
-        // Create the share asynchronously BEFORE presenting UICloudSharingController.
-        // This avoids the known bug where preparationHandler doesn't work
-        // inside UIViewControllerRepresentable.
-        isPreparingShare = true
-        Task {
-            do {
-                let share = try await sharingService.shareTrip(trip)
-                share[CKShare.SystemFieldKey.title] = trip.wrappedName
-                activeShare = share
-                isPreparingShare = false
-                showingCloudSharing = true
-            } catch {
-                isPreparingShare = false
-                let nsError = error as NSError
-                if nsError.domain == "CKErrorDomain" && nsError.code == 10 {
-                    shareError = "iCloud isn't ready yet. Please wait a moment for your trip to sync, then try again."
-                } else {
-                    shareError = error.localizedDescription
-                }
-                showingShareError = true
-            }
-        }
     }
 
     // MARK: - Share
