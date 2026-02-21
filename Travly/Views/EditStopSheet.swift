@@ -59,7 +59,7 @@ struct EditStopSheet: View {
                     if hasLocation {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
+                                .foregroundStyle(.green)
                             Text(locationName.isEmpty ? String(format: "%.4f, %.4f", latitude, longitude) : locationName)
                                 .font(.subheadline)
                             Spacer()
@@ -69,7 +69,7 @@ struct EditStopSheet: View {
                                 locationName = ""
                             }
                             .font(.caption)
-                            .foregroundColor(.red)
+                            .foregroundStyle(.red)
                         }
                     }
                     LocationSearchView(

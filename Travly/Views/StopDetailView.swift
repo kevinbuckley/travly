@@ -179,14 +179,14 @@ struct StopDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Visited")
                         .fontWeight(.medium)
                     if let visitedAt = stop.visitedAt {
                         Text(visitedAt, style: .date)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 Spacer()
@@ -198,7 +198,7 @@ struct StopDetailView: View {
                         try? viewContext.save()
                     }
                     .font(.subheadline)
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                 }
             }
 
@@ -238,7 +238,7 @@ struct StopDetailView: View {
                 Text("Mark as Visited")
                     .fontWeight(.medium)
             }
-            .foregroundColor(.green)
+            .foregroundStyle(.green)
         }
         .accessibilityLabel("Mark \(stop.wrappedName) as visited")
         .alert("Rate Your Visit", isPresented: $showingRatingSheet) {
@@ -288,7 +288,7 @@ struct StopDetailView: View {
                 Spacer()
                 Text("\(stop.commentsArray.count)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -302,7 +302,7 @@ struct StopDetailView: View {
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
-                    .foregroundColor(newCommentText.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .blue)
+                    .foregroundStyle(newCommentText.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .blue)
             }
             .disabled(newCommentText.trimmingCharacters(in: .whitespaces).isEmpty)
             .buttonStyle(.plain)
@@ -316,10 +316,10 @@ struct StopDetailView: View {
                 .font(.body)
             Text(comment.wrappedCreatedAt, style: .relative)
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             + Text(" ago")
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 2)
     }

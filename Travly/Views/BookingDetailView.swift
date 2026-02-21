@@ -3,6 +3,7 @@ import SwiftUI
 struct BookingDetailView: View {
 
     let booking: BookingEntity
+    var canEdit: Bool = true
     @State private var showingEditBooking = false
 
     private var dateFormatter: DateFormatter {
@@ -81,9 +82,11 @@ struct BookingDetailView: View {
         .navigationTitle(booking.wrappedTitle)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button("Edit") {
-                    showingEditBooking = true
+            if canEdit {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Edit") {
+                        showingEditBooking = true
+                    }
                 }
             }
         }

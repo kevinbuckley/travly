@@ -87,7 +87,7 @@ struct TripMapView: View {
                     Text(trip.wrappedName)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
                     HStack(spacing: 4) {
                         Image(systemName: "mappin")
@@ -96,7 +96,7 @@ struct TripMapView: View {
                             .font(.caption)
                             .lineLimit(1)
                     }
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 }
                 Spacer()
                 let stopCount = trip.daysArray.flatMap(\.stopsArray).count

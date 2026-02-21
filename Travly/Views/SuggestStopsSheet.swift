@@ -143,16 +143,16 @@ struct SuggestStopsSheet: View {
             HStack(spacing: 12) {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundColor(isSelected ? .blue : .gray)
+                    .foregroundStyle(isSelected ? .blue : .gray)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(suggestion.name)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                     Text(suggestion.reason)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                     HStack(spacing: 8) {
                         categoryBadge(category)
@@ -176,7 +176,7 @@ struct SuggestStopsSheet: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(categoryColor(category).opacity(0.15))
-            .foregroundColor(categoryColor(category))
+            .foregroundStyle(categoryColor(category))
             .clipShape(Capsule())
     }
 
@@ -184,13 +184,13 @@ struct SuggestStopsSheet: View {
         let text = minutes >= 60 ? "\(minutes / 60)h \(minutes % 60)m" : "\(minutes)m"
         return Label(text, systemImage: "clock")
             .font(.caption2)
-            .foregroundColor(.secondary)
+            .foregroundStyle(.secondary)
     }
 
     private var addedBanner: some View {
         HStack {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
             Text("\(addedCount) stop\(addedCount == 1 ? "" : "s") added to Day \(day.dayNumber)")
                 .font(.subheadline)
                 .fontWeight(.medium)

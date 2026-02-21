@@ -103,7 +103,7 @@ struct ImportBookingSheet: View {
             if addedCount > 0 {
                 Section {
                     HStack {
-                        Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                         Text("\(addedCount) booking(s) imported!")
                     }
                 }

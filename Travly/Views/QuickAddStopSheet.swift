@@ -55,7 +55,7 @@ struct QuickAddStopSheet: View {
                 // Success state
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 48))
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                 Text(name)
                     .font(.title3)
                     .fontWeight(.semibold)
@@ -67,7 +67,7 @@ struct QuickAddStopSheet: View {
                 // Permission denied state
                 Image(systemName: "location.slash.fill")
                     .font(.system(size: 48))
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                 Text("Location Access Denied")
                     .font(.title3)
                     .fontWeight(.semibold)
@@ -86,7 +86,7 @@ struct QuickAddStopSheet: View {
                 // Error state
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 48))
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                 Text(error)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -102,7 +102,7 @@ struct QuickAddStopSheet: View {
                     .controlSize(.large)
                 Text(isGeocoding ? "Finding place name..." : "Getting your location...")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity)

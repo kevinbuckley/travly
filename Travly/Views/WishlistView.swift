@@ -308,7 +308,7 @@ struct AddWishlistToTripSheet: View {
                                     Image(systemName: "checkmark").foregroundStyle(.blue)
                                 }
                             }
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         }
                     }
                 } header: { Text("Select Trip") }
@@ -329,7 +329,7 @@ struct AddWishlistToTripSheet: View {
                                             Image(systemName: "checkmark").foregroundStyle(.blue)
                                         }
                                     }
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                 }
                             }
                         } header: { Text("Select Day") }
@@ -339,7 +339,7 @@ struct AddWishlistToTripSheet: View {
                 if added {
                     Section {
                         HStack {
-                            Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                             Text("Added \(item.wrappedName) to the trip!")
                                 .font(.subheadline)
                         }

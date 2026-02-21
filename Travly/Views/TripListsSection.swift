@@ -84,7 +84,7 @@ struct TripListsSection: View {
                 }
             } label: {
                 Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(item.isChecked ? .green : .gray)
+                    .foregroundStyle(item.isChecked ? .green : .gray)
             }
             .buttonStyle(.plain)
             .disabled(!canEdit)
@@ -92,7 +92,7 @@ struct TripListsSection: View {
             Text(item.wrappedText)
                 .font(.subheadline)
                 .strikethrough(item.isChecked)
-                .foregroundColor(item.isChecked ? .secondary : .primary)
+                .foregroundStyle(item.isChecked ? .secondary : .primary)
 
             Spacer()
 
@@ -123,7 +123,7 @@ struct TripListsSection: View {
                 addItem(to: list)
             } label: {
                 Image(systemName: "plus.circle.fill")
-                    .foregroundColor(
+                    .foregroundStyle(
                         (list.id.flatMap { newItemTexts[$0] } ?? "").trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .blue
                     )
             }
@@ -206,10 +206,10 @@ struct TripListsSection: View {
                                 Text("Day \(day.dayNumber)")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                 Text(day.formattedDate)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                             Spacer()
                             if !day.wrappedLocation.isEmpty {

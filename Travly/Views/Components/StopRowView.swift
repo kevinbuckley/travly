@@ -49,7 +49,7 @@ struct StopRowView: View {
                 if stop.isVisited {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.caption2)
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                 }
             }
             if let timeText = timeRangeText {
