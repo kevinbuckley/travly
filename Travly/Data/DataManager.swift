@@ -106,11 +106,14 @@ final class DataManager {
             notes: notes
         )
         stop.day = day
+        // Touch the trip so @ObservedObject triggers a refresh in TripDetailView
+        day.trip?.updatedAt = Date()
         try? context.save()
         return stop
     }
 
     func deleteStop(_ stop: StopEntity) {
+        stop.day?.trip?.updatedAt = Date()
         context.delete(stop)
         try? context.save()
     }
@@ -127,6 +130,7 @@ final class DataManager {
         }
         stop.sortOrder = Int32(targetDay.stopsArray.count)
         stop.day = targetDay
+        targetDay.trip?.updatedAt = Date()
         try? context.save()
     }
 
@@ -136,6 +140,7 @@ final class DataManager {
         for (index, stop) in stops.enumerated() {
             stop.sortOrder = Int32(index)
         }
+        day.trip?.updatedAt = Date()
         try? context.save()
     }
 

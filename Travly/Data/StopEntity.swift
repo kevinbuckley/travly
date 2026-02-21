@@ -21,6 +21,8 @@ public class StopEntity: NSManagedObject {
     @NSManaged public var website: String?
     @NSManaged public var day: DayEntity?
     @NSManaged public var comments: NSSet?
+    @NSManaged public var links: NSSet?
+    @NSManaged public var todos: NSSet?
 }
 
 extension StopEntity: Identifiable {}
@@ -38,6 +40,14 @@ extension StopEntity {
 
     var commentsArray: [CommentEntity] {
         (comments as? Set<CommentEntity>)?.sorted { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) } ?? []
+    }
+
+    var linksArray: [StopLinkEntity] {
+        (links as? Set<StopLinkEntity>)?.sorted { $0.sortOrder < $1.sortOrder } ?? []
+    }
+
+    var todosArray: [StopTodoEntity] {
+        (todos as? Set<StopTodoEntity>)?.sorted { $0.sortOrder < $1.sortOrder } ?? []
     }
 
     @discardableResult

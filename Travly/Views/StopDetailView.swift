@@ -15,6 +15,10 @@ struct StopDetailView: View {
     @State private var showingRatingSheet = false
     @State private var pendingRating: Int = 0
     @State private var newCommentText = ""
+    @State private var newLinkURL = ""
+    @State private var newLinkTitle = ""
+    @State private var showingAddLink = false
+    @State private var newTodoText = ""
 
     private var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
@@ -110,6 +114,12 @@ struct StopDetailView: View {
                     Text("Notes")
                 }
             }
+
+            // Links
+            linksSection
+
+            // Todos
+            todosSection
 
             // Comments
             commentsSection
@@ -260,6 +270,184 @@ struct StopDetailView: View {
         } message: {
             Text("How was \(stop.wrappedName)?")
         }
+    }
+
+    // MARK: - Links
+
+    private var linksSection: some View {
+        Section {
+            ForEach(stop.linksArray) { link in
+                if let url = URL(string: link.wrappedURL) {
+                    Link(destination: url) {
+                        HStack {
+                            Image(systemName: "link")
+                                .foregroundStyle(.blue)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(link.displayLabel)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.blue)
+                                if !link.wrappedTitle.isEmpty {
+                                    Text(link.wrappedURL)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .onDelete { offsets in
+                if canEdit { deleteLinks(at: offsets) }
+            }
+            .deleteDisabled(!canEdit)
+
+            if canEdit {
+                Button {
+                    showingAddLink = true
+                } label: {
+                    Label("Add Link", systemImage: "plus.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(.blue)
+                }
+            }
+        } header: {
+            HStack {
+                Text("Links")
+                Spacer()
+                if !stop.linksArray.isEmpty {
+                    Text("\(stop.linksArray.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .alert("Add Link", isPresented: $showingAddLink) {
+            TextField("URL (e.g. https://...)", text: $newLinkURL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            TextField("Label (optional)", text: $newLinkTitle)
+            Button("Add") { addLink() }
+            Button("Cancel", role: .cancel) {
+                newLinkURL = ""
+                newLinkTitle = ""
+            }
+        } message: {
+            Text("Paste a URL and optionally give it a label.")
+        }
+    }
+
+    private func addLink() {
+        var urlString = newLinkURL.trimmingCharacters(in: .whitespaces)
+        guard !urlString.isEmpty else { return }
+        // Auto-prefix https:// if no scheme
+        if !urlString.contains("://") {
+            urlString = "https://\(urlString)"
+        }
+        let link = StopLinkEntity.create(
+            in: viewContext,
+            title: newLinkTitle.trimmingCharacters(in: .whitespaces),
+            url: urlString,
+            sortOrder: stop.linksArray.count
+        )
+        link.stop = stop
+        try? viewContext.save()
+        newLinkURL = ""
+        newLinkTitle = ""
+    }
+
+    private func deleteLinks(at offsets: IndexSet) {
+        let links = stop.linksArray
+        for index in offsets {
+            viewContext.delete(links[index])
+        }
+        try? viewContext.save()
+    }
+
+    // MARK: - Todos
+
+    private var todosSection: some View {
+        Section {
+            ForEach(stop.todosArray) { todo in
+                HStack(spacing: 10) {
+                    Button {
+                        if canEdit {
+                            todo.isCompleted.toggle()
+                            try? viewContext.save()
+                        }
+                    } label: {
+                        Image(systemName: todo.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(todo.isCompleted ? .green : .gray)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canEdit)
+
+                    Text(todo.wrappedText)
+                        .font(.subheadline)
+                        .strikethrough(todo.isCompleted)
+                        .foregroundStyle(todo.isCompleted ? .secondary : .primary)
+                }
+            }
+            .onDelete { offsets in
+                if canEdit { deleteTodos(at: offsets) }
+            }
+            .deleteDisabled(!canEdit)
+
+            if canEdit {
+                HStack(spacing: 8) {
+                    TextField("Add todo...", text: $newTodoText)
+                        .font(.subheadline)
+                        .onSubmit { addTodo() }
+                    Button {
+                        addTodo()
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundStyle(
+                                newTodoText.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .blue
+                            )
+                    }
+                    .disabled(newTodoText.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .buttonStyle(.plain)
+                }
+            }
+        } header: {
+            HStack {
+                Text("Planning Todos")
+                Spacer()
+                let todos = stop.todosArray
+                if !todos.isEmpty {
+                    let done = todos.filter(\.isCompleted).count
+                    Text("\(done)/\(todos.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func addTodo() {
+        let trimmed = newTodoText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let todo = StopTodoEntity.create(
+            in: viewContext,
+            text: trimmed,
+            sortOrder: stop.todosArray.count
+        )
+        todo.stop = stop
+        try? viewContext.save()
+        newTodoText = ""
+    }
+
+    private func deleteTodos(at offsets: IndexSet) {
+        let todos = stop.todosArray
+        for index in offsets {
+            viewContext.delete(todos[index])
+        }
+        try? viewContext.save()
     }
 
     // MARK: - Comments

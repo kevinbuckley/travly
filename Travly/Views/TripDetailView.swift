@@ -116,6 +116,9 @@ struct TripDetailView: View {
                 }
             }
 
+            // MARK: - Planning Todos (aggregated)
+            planningTodosSection
+
             TripListsSection(trip: trip, canEdit: canEdit)
         }
         .listStyle(.insetGrouped)
@@ -287,6 +290,69 @@ struct TripDetailView: View {
                         Text("Edit")
                     }
                 }
+            }
+        }
+    }
+
+    // MARK: - Planning Todos (Aggregated)
+
+    private var allStopTodos: [(stop: StopEntity, todo: StopTodoEntity)] {
+        sortedDays.flatMap { day in
+            day.stopsArray.flatMap { stop in
+                stop.todosArray.map { (stop: stop, todo: $0) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var planningTodosSection: some View {
+        let todos = allStopTodos
+        if !todos.isEmpty {
+            Section {
+                let incomplete = todos.filter { !$0.todo.isCompleted }
+                let completed = todos.filter { $0.todo.isCompleted }
+
+                ForEach(incomplete, id: \.todo.id) { item in
+                    todoAggregateRow(item.stop, todo: item.todo)
+                }
+                ForEach(completed, id: \.todo.id) { item in
+                    todoAggregateRow(item.stop, todo: item.todo)
+                }
+            } header: {
+                HStack {
+                    Label("Planning Todos", systemImage: "checklist")
+                    Spacer()
+                    let done = todos.filter { $0.todo.isCompleted }.count
+                    Text("\(done)/\(todos.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func todoAggregateRow(_ stop: StopEntity, todo: StopTodoEntity) -> some View {
+        HStack(spacing: 10) {
+            Button {
+                if canEdit {
+                    todo.isCompleted.toggle()
+                    try? viewContext.save()
+                }
+            } label: {
+                Image(systemName: todo.isCompleted ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(todo.isCompleted ? .green : .gray)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canEdit)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(todo.wrappedText)
+                    .font(.subheadline)
+                    .strikethrough(todo.isCompleted)
+                    .foregroundStyle(todo.isCompleted ? .secondary : .primary)
+                Text(stop.wrappedName)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
         }
     }
