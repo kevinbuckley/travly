@@ -49,17 +49,45 @@ final class CloudKitSharingService {
     // MARK: - Share
 
     /// Create or get existing CKShare for a trip (used by UICloudSharingController).
+    /// Retries on permission failures, which can happen when a record hasn't synced to CloudKit yet.
     func shareTrip(_ trip: TripEntity) async throws -> CKShare {
         if let existing = existingShare(for: trip) {
             return existing
         }
 
-        // Use NSPersistentCloudKitContainer's built-in share method
-        let (_, share, _) = try await persistence.container.share(
-            [trip],
-            to: nil
-        )
-        return share
+        // Ensure any pending changes are saved before sharing
+        let context = trip.managedObjectContext
+        if let context, context.hasChanges {
+            try context.save()
+        }
+
+        // Retry up to 3 times with increasing delays.
+        // A newly created trip may not have synced to CloudKit yet,
+        // which causes "Invalid bundle ID" / permission errors.
+        var lastError: Error?
+        for attempt in 0..<3 {
+            if attempt > 0 {
+                // Wait for CloudKit sync: 2s, then 4s
+                try await Task.sleep(for: .seconds(2 * attempt))
+            }
+            do {
+                let (_, share, _) = try await persistence.container.share(
+                    [trip],
+                    to: nil
+                )
+                return share
+            } catch {
+                lastError = error
+                let nsError = error as NSError
+                // Only retry on permission/server errors that might resolve after sync
+                let isRetryable = nsError.domain == "CKErrorDomain" &&
+                    (nsError.code == 10 || nsError.code == 1 || nsError.code == 7)
+                if !isRetryable {
+                    throw error
+                }
+            }
+        }
+        throw lastError!
     }
 
     /// Persist an updated share after UICloudSharingController changes.

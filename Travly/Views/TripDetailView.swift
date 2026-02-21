@@ -894,7 +894,12 @@ struct TripDetailView: View {
                 showingCloudSharing = true
             } catch {
                 isPreparingShare = false
-                shareError = error.localizedDescription
+                let nsError = error as NSError
+                if nsError.domain == "CKErrorDomain" && nsError.code == 10 {
+                    shareError = "iCloud isn't ready yet. Please wait a moment for your trip to sync, then try again."
+                } else {
+                    shareError = error.localizedDescription
+                }
                 showingShareError = true
             }
         }
