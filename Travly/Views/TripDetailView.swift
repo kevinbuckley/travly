@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import CloudKit
 import MapKit
 import CoreLocation
 import TripCore
@@ -31,6 +32,10 @@ struct TripDetailView: View {
     @State private var draggingStopID: String?
     @State private var dropTargetDayID: UUID?
     @State private var showingCloudSharing = false
+    @State private var activeShare: CKShare?
+    @State private var isPreparingShare = false
+    @State private var shareError: String?
+    @State private var showingShareError = false
 
     private let sharingService = CloudKitSharingService()
 
@@ -64,6 +69,13 @@ struct TripDetailView: View {
     }
 
     var body: some View {
+        tripList
+            .toolbar { tripToolbar }
+    }
+
+    // MARK: - Trip List
+
+    private var tripList: some View {
         List {
             // MARK: - View Only Banner
             if sharingService.isShared(trip) && !canEdit {
@@ -80,28 +92,22 @@ struct TripDetailView: View {
                 .listRowBackground(Color.orange.opacity(0.1))
             }
 
-            // MARK: - Header
             headerSection
 
-            // MARK: - Status Actions
             if canEdit {
                 statusActionSection
             }
 
-            // MARK: - Weather
             if !trip.isPast {
                 WeatherSection(trip: trip)
             }
 
-            // MARK: - Bookings
             bookingsSection
 
-            // MARK: - Paste Itinerary
             if canEdit {
                 pasteItinerarySection
             }
 
-            // MARK: - Itinerary
             if !sortedDays.isEmpty {
                 let segments = locationSegments
                 let isMultiCity = segments.count > 1
@@ -116,68 +122,11 @@ struct TripDetailView: View {
                 }
             }
 
-            // MARK: - Custom Lists
             TripListsSection(trip: trip, canEdit: canEdit)
         }
         .listStyle(.insetGrouped)
         .navigationTitle(trip.wrappedName)
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                HStack(spacing: 16) {
-                    Menu {
-                        Button {
-                            showingCloudSharing = true
-                        } label: {
-                            Label(
-                                sharingService.isShared(trip) ? "Manage Sharing" : "Collaborate",
-                                systemImage: "person.crop.circle.badge.plus"
-                            )
-                        }
-                        Divider()
-                        Button {
-                            shareTripFile()
-                        } label: {
-                            Label("Send a Copy", systemImage: "paperplane")
-                        }
-                        Button {
-                            shareTripPDF()
-                        } label: {
-                            Label("Share as PDF", systemImage: "doc.richtext")
-                        }
-                        Button {
-                            shareTripText()
-                        } label: {
-                            Label("Share as Text", systemImage: "text.alignleft")
-                        }
-                        Divider()
-                        Button {
-                            exportToCalendar()
-                        } label: {
-                            Label("Add to Calendar", systemImage: "calendar.badge.plus")
-                        }
-                        .disabled(isExportingCalendar)
-                    } label: {
-                        HStack(spacing: 4) {
-                            if sharingService.isShared(trip) {
-                                Image(systemName: "person.2.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(.blue)
-                            }
-                            Image(systemName: "square.and.arrow.up")
-                        }
-                    }
-                    .accessibilityLabel("Share trip")
-                    if sharingService.canEdit(trip) {
-                        Button {
-                            showingEditTrip = true
-                        } label: {
-                            Text("Edit")
-                        }
-                    }
-                }
-            }
-        }
         .alert("Calendar", isPresented: $showingCalendarResult) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -185,13 +134,14 @@ struct TripDetailView: View {
                 Text(message)
             }
         }
-        .fullScreenCover(isPresented: $showingCloudSharing) {
-            CloudSharingView(
-                trip: trip,
-                persistence: PersistenceController.shared,
-                sharingService: sharingService
-            )
-            .background(ClearBackgroundView())
+        .fullScreenCover(isPresented: $showingCloudSharing, onDismiss: { activeShare = nil }) {
+            sharingCoverContent
+        }
+        .overlay { sharingOverlay }
+        .alert("Sharing Error", isPresented: $showingShareError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(shareError ?? "Unknown error")
         }
         .sheet(isPresented: $showingEditTrip) {
             EditTripSheet(trip: trip)
@@ -288,6 +238,67 @@ struct TripDetailView: View {
         } message: {
             if let booking = bookingToDelete {
                 Text("Are you sure you want to delete \"\(booking.wrappedTitle)\"?")
+            }
+        }
+    }
+
+    // MARK: - Toolbar
+
+    @ToolbarContentBuilder
+    private var tripToolbar: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            HStack(spacing: 16) {
+                Menu {
+                    Button {
+                        prepareAndShowSharing()
+                    } label: {
+                        Label(
+                            sharingService.isShared(trip) ? "Manage Sharing" : "Collaborate",
+                            systemImage: "person.crop.circle.badge.plus"
+                        )
+                    }
+                    .disabled(isPreparingShare)
+                    Divider()
+                    Button {
+                        shareTripFile()
+                    } label: {
+                        Label("Send a Copy", systemImage: "paperplane")
+                    }
+                    Button {
+                        shareTripPDF()
+                    } label: {
+                        Label("Share as PDF", systemImage: "doc.richtext")
+                    }
+                    Button {
+                        shareTripText()
+                    } label: {
+                        Label("Share as Text", systemImage: "text.alignleft")
+                    }
+                    Divider()
+                    Button {
+                        exportToCalendar()
+                    } label: {
+                        Label("Add to Calendar", systemImage: "calendar.badge.plus")
+                    }
+                    .disabled(isExportingCalendar)
+                } label: {
+                    HStack(spacing: 4) {
+                        if sharingService.isShared(trip) {
+                            Image(systemName: "person.2.fill")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                        }
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
+                .accessibilityLabel("Share trip")
+                if sharingService.canEdit(trip) {
+                    Button {
+                        showingEditTrip = true
+                    } label: {
+                        Text("Edit")
+                    }
+                }
             }
         }
     }
@@ -833,6 +844,60 @@ struct TripDetailView: View {
     private func findStop(byID uuidString: String) -> StopEntity? {
         guard let uuid = UUID(uuidString: uuidString) else { return nil }
         return sortedDays.flatMap(\.stopsArray).first { $0.id == uuid }
+    }
+
+    // MARK: - CloudKit Sharing
+
+    @ViewBuilder
+    private var sharingCoverContent: some View {
+        if let share = activeShare {
+            CloudSharingView(
+                share: share,
+                persistence: PersistenceController.shared,
+                sharingService: sharingService
+            )
+            .background(ClearBackgroundView())
+        }
+    }
+
+    @ViewBuilder
+    private var sharingOverlay: some View {
+        if isPreparingShare {
+            Color.black.opacity(0.3)
+                .ignoresSafeArea()
+                .overlay {
+                    ProgressView("Preparing share...")
+                        .padding(24)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
+        }
+    }
+
+    private func prepareAndShowSharing() {
+        // If share already exists, show the sharing UI immediately
+        if let existing = sharingService.existingShare(for: trip) {
+            activeShare = existing
+            showingCloudSharing = true
+            return
+        }
+
+        // Create the share asynchronously BEFORE presenting UICloudSharingController.
+        // This avoids the known bug where preparationHandler doesn't work
+        // inside UIViewControllerRepresentable.
+        isPreparingShare = true
+        Task {
+            do {
+                let share = try await sharingService.shareTrip(trip)
+                share[CKShare.SystemFieldKey.title] = trip.wrappedName
+                activeShare = share
+                isPreparingShare = false
+                showingCloudSharing = true
+            } catch {
+                isPreparingShare = false
+                shareError = error.localizedDescription
+                showingShareError = true
+            }
+        }
     }
 
     // MARK: - Share

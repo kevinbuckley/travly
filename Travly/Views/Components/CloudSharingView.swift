@@ -4,15 +4,14 @@ import CoreData
 
 struct CloudSharingView: UIViewControllerRepresentable {
 
-    let trip: TripEntity
+    let share: CKShare
     let persistence: PersistenceController
     let sharingService: CloudKitSharingService
-
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> CloudSharingHostController {
         let host = CloudSharingHostController()
-        host.trip = trip
+        host.share = share
         host.persistence = persistence
         host.sharingService = sharingService
         host.coordinator = context.coordinator
@@ -40,27 +39,16 @@ struct CloudSharingView: UIViewControllerRepresentable {
             _ csc: UICloudSharingController,
             failedToSaveShareWithError error: Error
         ) {
-            print("[SHARE] ❌ failedToSaveShareWithError: \(error)")
+            print("[SHARE] failedToSaveShareWithError: \(error)")
         }
 
         func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {
-            print("[SHARE] ✅ didSaveShare called")
-            if let share = csc.share {
-                print("[SHARE]   share URL: \(share.url?.absoluteString ?? "nil")")
-                print("[SHARE]   participants: \(share.participants.count)")
-                if let store = parent.persistence.privatePersistentStore {
-                    parent.persistence.container.persistUpdatedShare(share, in: store)
-                    print("[SHARE]   persisted share to store")
-                } else {
-                    print("[SHARE]   ⚠️ no private store to persist share")
-                }
-            } else {
-                print("[SHARE]   ⚠️ csc.share is nil")
+            if let share = csc.share, let store = parent.persistence.privatePersistentStore {
+                parent.persistence.container.persistUpdatedShare(share, in: store)
             }
         }
 
         func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
-            print("[SHARE] 🛑 didStopSharing called")
             if let share = csc.share,
                let store = parent.persistence.privatePersistentStore {
                 parent.persistence.container.purgeObjectsAndRecordsInZone(
@@ -68,24 +56,17 @@ struct CloudSharingView: UIViewControllerRepresentable {
                     in: store
                 ) { _, error in
                     if let error {
-                        print("[SHARE]   purge error: \(error)")
-                    } else {
-                        print("[SHARE]   purge succeeded")
+                        print("[SHARE] purge error: \(error)")
                     }
                 }
             }
         }
 
         func itemTitle(for csc: UICloudSharingController) -> String? {
-            let title = parent.trip.wrappedName
-            print("[SHARE] itemTitle requested: \(title)")
-            return title
+            csc.share?.value(forKey: CKShare.SystemFieldKey.title) as? String
         }
 
-        func itemThumbnailData(for csc: UICloudSharingController) -> Data? {
-            print("[SHARE] itemThumbnailData requested")
-            return nil
-        }
+        func itemThumbnailData(for csc: UICloudSharingController) -> Data? { nil }
     }
 }
 
@@ -106,7 +87,7 @@ struct ClearBackgroundView: UIViewRepresentable {
 
 class CloudSharingHostController: UIViewController, UIAdaptivePresentationControllerDelegate {
 
-    var trip: TripEntity!
+    var share: CKShare!
     var persistence: PersistenceController!
     var sharingService: CloudKitSharingService!
     var coordinator: CloudSharingView.Coordinator!
@@ -118,91 +99,42 @@ class CloudSharingHostController: UIViewController, UIAdaptivePresentationContro
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .clear
-        print("[SHARE] Host viewDidLoad")
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        print("[SHARE] Host viewDidAppear (didPresent=\(didPresent))")
-
         if !didPresent {
             didPresent = true
             presentSharingController()
         } else {
-            print("[SHARE] Host reappeared — sharing controller dismissed, cleaning up")
+            // Sharing controller was dismissed — clean up
             dismissIfNeeded()
         }
     }
 
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        print("[SHARE] Host viewWillDisappear")
-    }
-
     private func presentSharingController() {
-        let controller: UICloudSharingController
-
-        if let existingShare = sharingService.existingShare(for: trip) {
-            print("[SHARE] Using EXISTING share: \(existingShare.url?.absoluteString ?? "no URL")")
-            controller = UICloudSharingController(
-                share: existingShare,
-                container: persistence.cloudContainer
-            )
-        } else {
-            print("[SHARE] Creating NEW share via preparationHandler")
-            let container = persistence.container
-            let cloudContainer = persistence.cloudContainer
-            let tripToShare = trip!
-
-            controller = UICloudSharingController { sharingController, preparationCompletionHandler in
-                print("[SHARE] preparationHandler CALLED — calling container.share()")
-                print("[SHARE]   thread: \(Thread.isMainThread ? "MAIN" : "background")")
-
-                container.share([tripToShare], to: nil) { objectIDs, share, ckContainer, error in
-                    print("[SHARE] container.share() completion:")
-                    print("[SHARE]   thread: \(Thread.isMainThread ? "MAIN" : "background")")
-                    print("[SHARE]   error: \(error?.localizedDescription ?? "none")")
-                    print("[SHARE]   share: \(share != nil ? "exists" : "nil")")
-                    if let share {
-                        print("[SHARE]   share URL: \(share.url?.absoluteString ?? "nil")")
-                        print("[SHARE]   share recordID: \(share.recordID)")
-                        share[CKShare.SystemFieldKey.title] = tripToShare.wrappedName
-                    }
-                    if let objectIDs {
-                        print("[SHARE]   objectIDs: \(objectIDs)")
-                    }
-                    print("[SHARE] Calling preparationCompletionHandler...")
-                    preparationCompletionHandler(share, ckContainer, error)
-                    print("[SHARE] preparationCompletionHandler returned")
-                }
-            }
-        }
-
+        // Always use the share:container: initializer.
+        // The share was already created before this view was presented.
+        let controller = UICloudSharingController(
+            share: share,
+            container: persistence.cloudContainer
+        )
         controller.delegate = coordinator
         controller.availablePermissions = [.allowPublic, .allowPrivate, .allowReadOnly, .allowReadWrite]
         controller.modalPresentationStyle = .formSheet
         controller.presentationController?.delegate = self
-
-        print("[SHARE] Presenting UICloudSharingController...")
-        present(controller, animated: true) {
-            print("[SHARE] UICloudSharingController presented (animation complete)")
-        }
+        present(controller, animated: true)
     }
 
     private func dismissIfNeeded() {
-        guard !isDismissing else {
-            print("[SHARE] dismissIfNeeded — already dismissing, skipped")
-            return
-        }
+        guard !isDismissing else { return }
         isDismissing = true
-        print("[SHARE] dismissIfNeeded — calling onDismiss")
         onDismiss?()
     }
 
     // MARK: - UIAdaptivePresentationControllerDelegate
 
     func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
-        print("[SHARE] presentationControllerDidDismiss")
         dismissIfNeeded()
     }
 }
