@@ -499,7 +499,7 @@ struct PasteItinerarySheet: View {
             HStack(spacing: 12) {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.title2)
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Found \(totalStops) stop\(totalStops == 1 ? "" : "s") across \(parsedDays.count) day\(parsedDays.count == 1 ? "" : "s")")
                         .font(.subheadline)
@@ -538,17 +538,17 @@ struct PasteItinerarySheet: View {
                     HStack(spacing: 12) {
                         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                             .font(.title3)
-                            .foregroundColor(isSelected ? .blue : .gray)
+                            .foregroundStyle(isSelected ? .blue : .gray)
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(stop.name)
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             if !stop.note.isEmpty {
                                 Text(stop.note)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                                     .lineLimit(2)
                             }
                             HStack(spacing: 8) {
@@ -582,7 +582,7 @@ struct PasteItinerarySheet: View {
     private var addedBanner: some View {
         HStack {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
             Text("\(addedCount) stop\(addedCount == 1 ? "" : "s") added to \(trip.wrappedName)")
                 .font(.subheadline)
                 .fontWeight(.medium)
@@ -775,7 +775,7 @@ struct PasteItinerarySheet: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(categoryColor(category).opacity(0.15))
-            .foregroundColor(categoryColor(category))
+            .foregroundStyle(categoryColor(category))
             .clipShape(Capsule())
     }
 
@@ -790,7 +790,7 @@ struct PasteItinerarySheet: View {
         }
         return Label(text, systemImage: "clock")
             .font(.caption2)
-            .foregroundColor(.secondary)
+            .foregroundStyle(.secondary)
     }
 
     private func categoryLabel(_ cat: StopCategory) -> String {

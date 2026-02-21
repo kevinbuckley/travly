@@ -131,7 +131,7 @@ struct LocateStopSheet: View {
     private var appliedRow: some View {
         HStack {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
             Text("Location applied!")
                 .fontWeight(.medium)
             Spacer()

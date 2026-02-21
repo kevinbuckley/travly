@@ -254,7 +254,7 @@ final class DataManager {
         }
 
         // NYC Weekend — completed trip
-        let _ = TripEntity.create(
+        let nyc = TripEntity.create(
             in: context,
             name: "New York City Weekend",
             destination: "New York, USA",
@@ -263,8 +263,7 @@ final class DataManager {
             status: .completed,
             notes: "Holiday shopping and sightseeing"
         )
-        generateDays(for: japan) // japan already generated above, this should be nyc
-        // Note: NYC doesn't need detailed stops for sample data
+        generateDays(for: nyc)
 
         try? context.save()
     }

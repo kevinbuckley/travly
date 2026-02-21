@@ -122,14 +122,14 @@ struct TimelineStopRow: View {
         Text(timeText)
             .font(.caption)
             .fontWeight(.medium)
-            .foregroundColor(.secondary)
+            .foregroundStyle(.secondary)
     }
 
     private var nameLabel: some View {
         Text(stop.wrappedName)
             .font(.subheadline)
             .fontWeight(isNextUpcoming ? .bold : .semibold)
-            .foregroundColor(isNextUpcoming ? categoryColor : .primary)
+            .foregroundStyle(isNextUpcoming ? categoryColor : .primary)
             .lineLimit(1)
     }
 
@@ -140,7 +140,7 @@ struct TimelineStopRow: View {
             Text(categoryLabel)
                 .font(.caption2)
         }
-        .foregroundColor(categoryColor)
+        .foregroundStyle(categoryColor)
     }
 
     // MARK: - Directions Button
@@ -151,7 +151,7 @@ struct TimelineStopRow: View {
         } label: {
             Image(systemName: "arrow.triangle.turn.up.right.diamond")
                 .font(.caption)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
                 .padding(6)
                 .background(Color.blue.opacity(0.1))
                 .clipShape(Circle())
@@ -177,14 +177,14 @@ struct TimelineStopRow: View {
             if stop.isVisited {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.caption)
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                     .padding(6)
                     .background(Color.green.opacity(0.1))
                     .clipShape(Circle())
             } else {
                 Image(systemName: "circle")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .padding(6)
                     .background(Color.secondary.opacity(0.1))
                     .clipShape(Circle())

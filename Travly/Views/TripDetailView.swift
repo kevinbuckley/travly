@@ -406,7 +406,7 @@ struct TripDetailView: View {
                 }
             } else {
                 ForEach(sortedBookings) { booking in
-                    NavigationLink(destination: BookingDetailView(booking: booking)) {
+                    NavigationLink(destination: BookingDetailView(booking: booking, canEdit: canEdit)) {
                         bookingRow(booking)
                     }
                 }
@@ -902,10 +902,10 @@ struct TripDetailView: View {
                         Text("Paste Itinerary")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         Text("Import stops from ChatGPT, a blog, or any text")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     Spacer()
                     Image(systemName: "doc.on.clipboard")

@@ -1,7 +1,6 @@
 import Testing
 import Foundation
 import TripCore
-import SwiftData
 
 @testable import Travly
 

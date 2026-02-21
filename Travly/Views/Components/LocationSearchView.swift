@@ -56,11 +56,11 @@ struct LocationSearchView: View {
     private func searchErrorBanner(_ message: String) -> some View {
         HStack(spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
                 .font(.caption)
             Text(message)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding(.horizontal)
         .padding(.vertical, 6)
@@ -109,14 +109,14 @@ struct LocationSearchView: View {
     private var selectedLocationBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
             VStack(alignment: .leading, spacing: 1) {
                 Text(selectedName)
                     .font(.subheadline)
                     .fontWeight(.medium)
                 Text(String(format: "%.4f, %.4f", selectedLatitude, selectedLongitude))
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             Spacer()
             Button {
@@ -124,7 +124,7 @@ struct LocationSearchView: View {
             } label: {
                 Text("Change")
                     .font(.caption)
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
             }
             .buttonStyle(.plain)
         }
@@ -157,17 +157,17 @@ struct LocationSearchView: View {
     private func resultRowLabel(_ result: LocationSearchResult) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "mappin.circle.fill")
-                .foregroundColor(.red)
+                .foregroundStyle(.red)
                 .font(.title3)
             VStack(alignment: .leading, spacing: 1) {
                 Text(result.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 if !result.subtitle.isEmpty {
                     Text(result.subtitle)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
             }

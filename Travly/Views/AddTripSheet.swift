@@ -96,10 +96,10 @@ struct AddTripSheet: View {
                                     Text("Paste Itinerary")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     Text("Import stops from ChatGPT, a blog, or any text")
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")

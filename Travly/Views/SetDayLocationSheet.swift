@@ -63,11 +63,11 @@ struct SetDayLocationSheet: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(result.title)
                                         .font(.subheadline)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     if !result.subtitle.isEmpty {
                                         Text(result.subtitle)
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                             }
@@ -99,7 +99,7 @@ struct SetDayLocationSheet: View {
                                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                                         .foregroundStyle(isSelected ? .blue : .secondary)
                                     Text("Day \(d.dayNumber)")
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     Spacer()
                                     Text(d.formattedDate)
                                         .font(.caption)

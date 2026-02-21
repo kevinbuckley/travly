@@ -16,6 +16,7 @@
 		145374CF48F7287DC1FF7DBD /* TravelTimeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CB348BEB5DE3E2D27E23BD /* TravelTimeRow.swift */; };
 		1A4F6BE4B635C79136D99039 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9507EB4177C2F087C5318FC /* ContentView.swift */; };
 		1F7F440A40F35E2647D4A371 /* LocationSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E6C8D5566E0C3FA8E805713 /* LocationSearchView.swift */; };
+		1FF8463DF5BD40DFE8F4A836 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 91B2F6DC5B7551F1ACC36DBA /* PrivacyInfo.xcprivacy */; };
 		23693BFFA55280F8D241F590 /* SuggestStopsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439FB6B15AE0ACC162EACEE7 /* SuggestStopsSheet.swift */; };
 		24CEBAC1C962561E442F4EEF /* TripTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EF69324487D23D0C75CD38F /* TripTransfer.swift */; };
 		2BC488A52A370B9E10389BAF /* PhotoLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB62F1AFC14FA36E7D62D9E3 /* PhotoLibraryService.swift */; };
@@ -121,6 +122,7 @@
 		871FC162371D442485362A6E /* ShareSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheetView.swift; sourceTree = "<group>"; };
 		89B881F194945D5D93EBCB16 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		8D73EE22C410FC622A996026 /* AddBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookingSheet.swift; sourceTree = "<group>"; };
+		91B2F6DC5B7551F1ACC36DBA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		9231EB44A71B070AAAF41817 /* TripListItemEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripListItemEntity.swift; sourceTree = "<group>"; };
 		96E3E46DBD876423B75E5B58 /* TripCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TripCore; path = Packages/TripCore; sourceTree = SOURCE_ROOT; };
 		98A8D7C5042884D295BEA112 /* BudgetSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetSection.swift; sourceTree = "<group>"; };
@@ -235,6 +237,7 @@
 				4E94BF365586F3C6938B520A /* Assets.xcassets */,
 				B9507EB4177C2F087C5318FC /* ContentView.swift */,
 				C7330855EE4666BF054B6AD0 /* Info.plist */,
+				91B2F6DC5B7551F1ACC36DBA /* PrivacyInfo.xcprivacy */,
 				E0E419B638C5716A0768E874 /* Travly.entitlements */,
 				81D52F71969034C036E68087 /* TravlyApp.swift */,
 				5EF4CE4A6C4242716EFEE1C3 /* Data */,
@@ -403,6 +406,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0DAB370E2944656B795003FF /* Assets.xcassets in Resources */,
+				1FF8463DF5BD40DFE8F4A836 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -504,7 +508,7 @@
 				CODE_SIGN_ENTITLEMENTS = Travly/Travly.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEVELOPMENT_TEAM = A6VYGLF4DB;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Travly/Info.plist;
@@ -537,7 +541,7 @@
 				CODE_SIGN_ENTITLEMENTS = Travly/Travly.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEVELOPMENT_TEAM = A6VYGLF4DB;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Travly/Info.plist;

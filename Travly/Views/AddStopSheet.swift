@@ -102,7 +102,7 @@ struct AddStopSheet: View {
     private var locationSelectedRow: some View {
         HStack {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
             Text(locationName.isEmpty ? String(format: "%.4f, %.4f", latitude, longitude) : locationName)
                 .font(.subheadline)
             Spacer()
@@ -112,7 +112,7 @@ struct AddStopSheet: View {
                 locationName = ""
             }
             .font(.caption)
-            .foregroundColor(.red)
+            .foregroundStyle(.red)
         }
     }
 
@@ -124,14 +124,14 @@ struct AddStopSheet: View {
             } label: {
                 HStack {
                     Image(systemName: "location.fill")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                     Text("Use Current Location")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                     Spacer()
                     if !locMgr.isAuthorized {
                         Text("Tap to enable")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

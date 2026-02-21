@@ -113,12 +113,12 @@ struct ActiveTripDashboard: View {
             Text("ACTIVE TRIP")
                 .font(.caption2)
                 .fontWeight(.bold)
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
                 .tracking(0.5)
             Text("Day \(dayNumber) of \(trip.wrappedName)")
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .lineLimit(1)
             headerSubtitle
         }
@@ -128,13 +128,13 @@ struct ActiveTripDashboard: View {
         HStack(spacing: 4) {
             Text(dateText)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Text("\u{00B7}")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Text(trip.wrappedDestination)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
     }
@@ -143,7 +143,7 @@ struct ActiveTripDashboard: View {
         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
             .font(.caption)
             .fontWeight(.semibold)
-            .foregroundColor(.secondary)
+            .foregroundStyle(.secondary)
     }
 
     // MARK: - Expanded Content
@@ -165,7 +165,7 @@ struct ActiveTripDashboard: View {
         Text("TODAY'S ITINERARY")
             .font(.caption)
             .fontWeight(.bold)
-            .foregroundColor(.secondary)
+            .foregroundStyle(.secondary)
             .tracking(0.5)
             .padding(.horizontal, 16)
             .padding(.top, 12)
@@ -178,10 +178,10 @@ struct ActiveTripDashboard: View {
         VStack(spacing: 8) {
             Image(systemName: "calendar.badge.plus")
                 .font(.title2)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Text("No stops planned for today")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 20)
@@ -242,11 +242,11 @@ struct ActiveTripDashboard: View {
         HStack(spacing: 6) {
             Image(systemName: "location.fill")
                 .font(.caption)
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
             Text("I'm Here")
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
@@ -268,11 +268,11 @@ struct ActiveTripDashboard: View {
         HStack(spacing: 6) {
             Image(systemName: "plus.circle.fill")
                 .font(.caption)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
             Text("Plan a Stop")
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
