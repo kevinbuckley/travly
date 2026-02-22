@@ -77,6 +77,79 @@ public struct ItineraryEngine: Sendable {
         }
     }
 
+    // MARK: - Smart Day Sync
+
+    /// Result of computing which days to keep, add, or remove when trip dates change.
+    public struct DaySyncResult: Sendable, Equatable {
+        /// IDs of existing days that still fall within the new date range (keep them).
+        public let keepDayIDs: Set<UUID>
+        /// Dates that need new Day objects created (no existing day covers them).
+        public let datesToAdd: [Date]
+        /// IDs of existing days that fall outside the new date range (delete them).
+        public let removeDayIDs: Set<UUID>
+
+        public init(keepDayIDs: Set<UUID>, datesToAdd: [Date], removeDayIDs: Set<UUID>) {
+            self.keepDayIDs = keepDayIDs
+            self.datesToAdd = datesToAdd
+            self.removeDayIDs = removeDayIDs
+        }
+    }
+
+    /// Compute which existing days to keep, which to remove, and which dates need new days,
+    /// given a new date range for the trip.
+    ///
+    /// Days are matched by calendar date (year/month/day). Existing days whose date falls
+    /// within the new range are preserved; those outside are marked for removal. Any dates
+    /// in the new range not covered by an existing day are returned as `datesToAdd`.
+    public static func syncDays(
+        newStart: Date,
+        newEnd: Date,
+        existingDays: [Day]
+    ) -> DaySyncResult {
+        let calendar = Calendar.current
+        let startOfStart = calendar.startOfDay(for: newStart)
+        let startOfEnd = calendar.startOfDay(for: newEnd)
+
+        // Build the set of all calendar dates in the new range
+        var newDates: Set<DateComponents> = []
+        var allNewDates: [Date] = []
+        var current = startOfStart
+        while current <= startOfEnd {
+            let comps = calendar.dateComponents([.year, .month, .day], from: current)
+            newDates.insert(comps)
+            allNewDates.append(current)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+            current = next
+        }
+
+        // Classify existing days
+        var keepIDs: Set<UUID> = []
+        var removeIDs: Set<UUID> = []
+        var coveredDates: Set<DateComponents> = []
+
+        for day in existingDays {
+            let comps = calendar.dateComponents([.year, .month, .day], from: day.date)
+            if newDates.contains(comps) {
+                keepIDs.insert(day.id)
+                coveredDates.insert(comps)
+            } else {
+                removeIDs.insert(day.id)
+            }
+        }
+
+        // Find dates that need new days
+        let datesToAdd = allNewDates.filter { date in
+            let comps = calendar.dateComponents([.year, .month, .day], from: date)
+            return !coveredDates.contains(comps)
+        }
+
+        return DaySyncResult(
+            keepDayIDs: keepIDs,
+            datesToAdd: datesToAdd,
+            removeDayIDs: removeIDs
+        )
+    }
+
     /// Calculate aggregate travel statistics for a trip.
     ///
     /// Total distance is computed by summing Haversine distances between consecutive stops

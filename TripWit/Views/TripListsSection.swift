@@ -10,6 +10,8 @@ struct TripListsSection: View {
     @State private var dayPickerItem: TripListItemEntity?
     @State private var showingAddList = false
     @State private var newListName = ""
+    @State private var itemToDelete: TripListItemEntity?
+    @State private var showingDeleteConfirmation = false
 
     /// Default list templates available for quick creation.
     private static let listTemplates: [(name: String, icon: String)] = [
@@ -38,6 +40,21 @@ struct TripListsSection: View {
             .sheet(item: $dayPickerItem) { item in
                 addToDaySheet(item: item)
             }
+            .alert("Delete Item?", isPresented: $showingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    if let item = itemToDelete {
+                        viewContext.delete(item)
+                        trip.updatedAt = Date()
+                        try? viewContext.save()
+                    }
+                    itemToDelete = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    itemToDelete = nil
+                }
+            } message: {
+                Text("\"\(itemToDelete?.wrappedText ?? "")\" will be permanently removed.")
+            }
     }
 
     // MARK: - List Section
@@ -52,7 +69,11 @@ struct TripListsSection: View {
             }
             .onDelete { offsets in
                 if canEdit {
-                    deleteItems(at: offsets, from: list)
+                    let items = list.itemsArray.sorted { $0.sortOrder < $1.sortOrder }
+                    if let index = offsets.first {
+                        itemToDelete = items[index]
+                        showingDeleteConfirmation = true
+                    }
                 }
             }
             .deleteDisabled(!canEdit)

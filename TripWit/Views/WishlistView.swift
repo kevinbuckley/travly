@@ -12,6 +12,8 @@ struct WishlistView: View {
     @State private var showingAddItem = false
     @State private var itemToAddToTrip: WishlistItemEntity?
     @State private var itemToEdit: WishlistItemEntity?
+    @State private var itemToDelete: WishlistItemEntity?
+    @State private var showingDeleteConfirmation = false
     @State private var selectedCity: String = "All"
 
     private var uniqueCities: [String] {
@@ -61,6 +63,20 @@ struct WishlistView: View {
         .sheet(item: $itemToEdit) { item in
             EditWishlistItemSheet(item: item)
         }
+        .alert("Delete Place?", isPresented: $showingDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                if let item = itemToDelete {
+                    viewContext.delete(item)
+                    try? viewContext.save()
+                }
+                itemToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                itemToDelete = nil
+            }
+        } message: {
+            Text("\"\(itemToDelete?.wrappedName ?? "")\" will be permanently removed from your wishlist.")
+        }
     }
 
     private var emptyState: some View {
@@ -102,8 +118,8 @@ struct WishlistView: View {
                     .buttonStyle(.plain)
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
-                            viewContext.delete(item)
-                            try? viewContext.save()
+                            itemToDelete = item
+                            showingDeleteConfirmation = true
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }

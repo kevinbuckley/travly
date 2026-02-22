@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BookingDetailView: View {
 
-    let booking: BookingEntity
+    @ObservedObject var booking: BookingEntity
     var canEdit: Bool = true
     @State private var showingEditBooking = false
 

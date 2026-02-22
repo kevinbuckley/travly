@@ -6,7 +6,7 @@ import TripCore
 struct StopDetailView: View {
 
     @Environment(\.managedObjectContext) private var viewContext
-    let stop: StopEntity
+    @ObservedObject var stop: StopEntity
     var canEdit: Bool = true
 
     @State private var showingEditStop = false
@@ -20,6 +20,7 @@ struct StopDetailView: View {
     @State private var showingAddLink = false
     @State private var newTodoText = ""
     @State private var showingFullscreenMap = false
+    @State private var showingUndoVisitedAlert = false
 
     private var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
@@ -193,6 +194,18 @@ struct StopDetailView: View {
                 additionalStops: otherDayStops
             )
         }
+        .alert("Remove Visited Status?", isPresented: $showingUndoVisitedAlert) {
+            Button("Remove", role: .destructive) {
+                stop.isVisited = false
+                stop.visitedAt = nil
+                stop.rating = 0
+                stop.day?.trip?.updatedAt = Date()
+                try? viewContext.save()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Your rating and visit date will be cleared.")
+        }
     }
 
     /// Other stops on the same day (with coordinates) for map context.
@@ -231,11 +244,7 @@ struct StopDetailView: View {
                 Spacer()
                 if canEdit {
                     Button("Undo") {
-                        stop.isVisited = false
-                        stop.visitedAt = nil
-                        stop.rating = 0
-                        stop.day?.trip?.updatedAt = Date()
-                        try? viewContext.save()
+                        showingUndoVisitedAlert = true
                     }
                     .font(.subheadline)
                     .foregroundStyle(.red)

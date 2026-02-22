@@ -21,12 +21,12 @@
         <div class="app-icon">✈</div>
         <h1>TripWit — Privacy Policy</h1>
     </div>
-    <p class="date">Effective date: February 15, 2026</p>
+    <p class="date">Effective date: February 22, 2026</p>
 
     <p>TripWit is a personal travel planning app built for families and individuals. Your privacy matters to us. This policy explains what data the app accesses and how it's handled.</p>
 
     <h2>Data We Do Not Collect</h2>
-    <p>TripWit does <strong>not</strong> collect, store, or transmit any personal data to external servers. There is no analytics, no tracking, no advertising, and no user accounts.</p>
+    <p>TripWit does <strong>not</strong> collect, store, or transmit any personal data to our servers. There is no analytics, no tracking, no advertising, and no user accounts.</p>
     <ul>
         <li>No data is sent to us or any third party</li>
         <li>No analytics or crash reporting SDKs are included</li>
@@ -34,8 +34,19 @@
         <li>No user accounts or sign-in is required</li>
     </ul>
 
-    <h2>Data Stored on Your Device</h2>
-    <p>All trip data (trips, itineraries, stops, bookings, and comments) is stored locally on your device using Apple's SwiftData framework. This data never leaves your device unless you explicitly share it (e.g., exporting a PDF).</p>
+    <h2>Data Stored on Your Device &amp; iCloud</h2>
+    <p>All trip data (trips, itineraries, stops, bookings, expenses, lists, and comments) is stored on your device using Apple's Core Data framework. If you are signed in to iCloud, your data is also synced privately to your personal iCloud account so it is available across your devices. Apple manages iCloud storage and encryption — TripWit has no access to your iCloud credentials or account.</p>
+
+    <h2>Collaboration &amp; Shared Trips</h2>
+    <p>TripWit lets you collaborate on trips with others using Apple's CloudKit sharing. When you share a trip:</p>
+    <ul>
+        <li>The trip data is shared via your iCloud account to the people you invite</li>
+        <li>Only the specific trip you choose to share is visible to collaborators — not your other trips or personal data</li>
+        <li>Collaborators can view and edit the shared trip in real time</li>
+        <li>You control who has access and can stop sharing at any time</li>
+        <li>All data transfer is handled by Apple's CloudKit infrastructure and encrypted in transit</li>
+    </ul>
+    <p>TripWit never sees, stores, or has access to the shared data. Sharing is entirely between you and your collaborators via Apple's servers.</p>
 
     <h2>Location Data</h2>
     <p>TripWit requests access to your location only when you use the "I'm Here" feature to add a stop at your current position. Location data is used solely to:</p>
@@ -47,7 +58,10 @@
     <p>Your location is never transmitted to any server. It is processed entirely on your device.</p>
 
     <h2>Photo Library</h2>
-    <p>TripWit can access your photo library to match photos to trip stops based on location and time. Photos are matched and displayed entirely on your device. No photos are uploaded or shared.</p>
+    <p>TripWit can access your photo library to match photos to trip stops based on GPS location and time. Photos are matched and displayed entirely on your device. No photos are uploaded or shared.</p>
+
+    <h2>Calendar</h2>
+    <p>TripWit can optionally add your trip days to your device calendar. This requires your permission and only writes events — it does not read or modify your existing calendar entries.</p>
 
     <h2>Weather Data</h2>
     <p>TripWit fetches weather forecasts from the Open-Meteo API using your trip destination's coordinates. Only geographic coordinates are sent — no personal information. Open-Meteo is a free, open-source weather API. Their privacy policy is available at <a href="https://open-meteo.com/en/terms">open-meteo.com/en/terms</a>.</p>

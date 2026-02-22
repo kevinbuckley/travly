@@ -7,7 +7,7 @@ struct TimelineStopRow: View {
 
     @Environment(\.managedObjectContext) private var viewContext
 
-    let stop: StopEntity
+    @ObservedObject var stop: StopEntity
     let isFirst: Bool
     let isLast: Bool
     let isNextUpcoming: Bool

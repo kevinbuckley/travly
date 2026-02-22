@@ -1,5 +1,8 @@
 import CoreData
 import CloudKit
+import os
+
+private let pcLog = Logger(subsystem: "com.kevinbuckley.travelplanner", category: "Persistence")
 
 final class PersistenceController: ObservableObject {
 
@@ -85,11 +88,11 @@ final class PersistenceController: ObservableObject {
 
         container.loadPersistentStores { description, error in
             if let error {
-                print("Core Data store failed to load (\(description.url?.lastPathComponent ?? "unknown")): \(error)")
+                pcLog.error("Core Data store failed to load (\(description.url?.lastPathComponent ?? "unknown", privacy: .public)): \(error.localizedDescription, privacy: .public)")
                 // If a store fails to load, try to destroy it and reload.
                 // This handles corrupted stores or stores left over from SwiftData migration.
                 if let url = description.url {
-                    print("Attempting to destroy and recreate store at \(url.lastPathComponent)")
+                    pcLog.warning("Attempting to destroy and recreate store at \(url.lastPathComponent, privacy: .public)")
                     try? FileManager.default.removeItem(at: url)
                     // Also remove WAL/SHM companions
                     try? FileManager.default.removeItem(at: url.appendingPathExtension("shm"))
@@ -130,7 +133,7 @@ final class PersistenceController: ObservableObject {
             if file.hasSuffix(".store") || file.hasSuffix(".store-shm") || file.hasSuffix(".store-wal") {
                 let url = directory.appending(path: file)
                 try? fm.removeItem(at: url)
-                print("Removed legacy SwiftData file: \(file)")
+                pcLog.info("Removed legacy SwiftData file: \(file, privacy: .public)")
             }
         }
     }
@@ -181,7 +184,7 @@ final class PersistenceController: ObservableObject {
         do {
             try context.save()
         } catch {
-            print("Save error: \(error)")
+            pcLog.error("Save error: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -206,7 +209,7 @@ final class PersistenceController: ObservableObject {
             let shares = try container.fetchShares(matching: [object.objectID])
             return shares[object.objectID]
         } catch {
-            print("Error fetching share: \(error)")
+            pcLog.error("Error fetching share: \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }

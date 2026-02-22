@@ -84,6 +84,73 @@ final class DataManager {
         }
     }
 
+    /// Smart day sync: keeps days that still fall within the new date range,
+    /// deletes days outside it, and creates new days for uncovered dates.
+    /// Renumbers all surviving + new days sequentially by date.
+    func syncDays(for trip: TripEntity) {
+        guard let tripStart = trip.startDate, let tripEnd = trip.endDate else { return }
+
+        let calendar = Calendar.current
+        let startOfStart = calendar.startOfDay(for: tripStart)
+        let startOfEnd = calendar.startOfDay(for: tripEnd)
+
+        // Build the set of calendar dates in the new range
+        var newDateSet: Set<DateComponents> = []
+        var allNewDates: [Date] = []
+        var current = startOfStart
+        while current <= startOfEnd {
+            let comps = calendar.dateComponents([.year, .month, .day], from: current)
+            newDateSet.insert(comps)
+            allNewDates.append(current)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+            current = next
+        }
+
+        // Classify existing days: keep or delete
+        var coveredDates: Set<DateComponents> = []
+        for day in trip.daysArray {
+            let comps = calendar.dateComponents([.year, .month, .day], from: day.wrappedDate)
+            if newDateSet.contains(comps) {
+                coveredDates.insert(comps)
+            } else {
+                context.delete(day)
+            }
+        }
+
+        // Create new days for uncovered dates
+        for date in allNewDates {
+            let comps = calendar.dateComponents([.year, .month, .day], from: date)
+            if !coveredDates.contains(comps) {
+                let day = DayEntity.create(
+                    in: context,
+                    date: date,
+                    dayNumber: 0, // will be renumbered below
+                    location: trip.destination ?? ""
+                )
+                day.trip = trip
+            }
+        }
+
+        // Renumber all days sequentially by date
+        let sortedDays = trip.daysArray.sorted { $0.wrappedDate < $1.wrappedDate }
+        for (index, day) in sortedDays.enumerated() {
+            day.dayNumber = Int32(index + 1)
+        }
+    }
+
+    /// Count how many existing days with stops will be lost if dates change.
+    func daysWithStopsOutsideRange(for trip: TripEntity, newStart: Date, newEnd: Date) -> Int {
+        let calendar = Calendar.current
+        let startOfStart = calendar.startOfDay(for: newStart)
+        let startOfEnd = calendar.startOfDay(for: newEnd)
+
+        return trip.daysArray.filter { day in
+            let dayDate = calendar.startOfDay(for: day.wrappedDate)
+            let isOutside = dayDate < startOfStart || dayDate > startOfEnd
+            return isOutside && !day.stopsArray.isEmpty
+        }.count
+    }
+
     // MARK: - Stops
 
     @discardableResult

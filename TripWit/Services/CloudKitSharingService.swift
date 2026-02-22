@@ -1,5 +1,8 @@
 import CoreData
 import CloudKit
+import os
+
+private let shareLog = Logger(subsystem: "com.kevinbuckley.travelplanner", category: "Sharing")
 
 /// Manages CloudKit sharing operations for trips.
 final class CloudKitSharingService {
@@ -94,7 +97,7 @@ final class CloudKitSharingService {
     // FIX #5: Safe unwrap instead of force-unwrap
     func persistUpdatedShare(_ share: CKShare) {
         guard let store = persistence.privatePersistentStore else {
-            print("Warning: Private store not available to persist share")
+            shareLog.warning("Private store not available to persist share")
             return
         }
         persistence.container.persistUpdatedShare(share, in: store)
@@ -106,7 +109,7 @@ final class CloudKitSharingService {
     // FIX #5: Safe unwrap instead of force-unwrap
     func acceptShare(_ metadata: CKShare.Metadata) async throws {
         guard let store = persistence.sharedPersistentStore else {
-            print("Warning: Shared store not available to accept share")
+            shareLog.warning("Shared store not available to accept share")
             return
         }
         try await persistence.container.acceptShareInvitations(

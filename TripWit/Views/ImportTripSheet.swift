@@ -10,6 +10,7 @@ struct ImportTripSheet: View {
     var onImported: ((UUID) -> Void)?
 
     @State private var isImporting = false
+    @State private var showingDuplicateWarning = false
 
     private var dateFormatter: DateFormatter {
         let f = DateFormatter()
@@ -72,12 +73,39 @@ struct ImportTripSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Import") {
-                        importTrip()
+                        attemptImport()
                     }
                     .fontWeight(.semibold)
                     .disabled(isImporting)
                 }
             }
+            .alert("Possible Duplicate", isPresented: $showingDuplicateWarning) {
+                Button("Import as Copy") {
+                    importTrip()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("A trip named \"\(transfer.name)\" with similar dates already exists. Import anyway?")
+            }
+        }
+    }
+
+    private func attemptImport() {
+        if hasDuplicate() {
+            showingDuplicateWarning = true
+        } else {
+            importTrip()
+        }
+    }
+
+    private func hasDuplicate() -> Bool {
+        let request = TripEntity.fetchRequest() as! NSFetchRequest<TripEntity>
+        request.predicate = NSPredicate(format: "name ==[c] %@", transfer.name)
+        guard let matches = try? viewContext.fetch(request) else { return false }
+        return matches.contains { trip in
+            guard let tripStart = trip.startDate, let tripEnd = trip.endDate else { return false }
+            // Check for date overlap: trips overlap if one starts before the other ends
+            return tripStart <= transfer.endDate && transfer.startDate <= tripEnd
         }
     }
 

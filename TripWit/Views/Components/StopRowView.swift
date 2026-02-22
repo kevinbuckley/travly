@@ -3,7 +3,7 @@ import TripCore
 
 struct StopRowView: View {
 
-    let stop: StopEntity
+    @ObservedObject var stop: StopEntity
 
     private var timeRangeText: String? {
         let formatter = DateFormatter()

@@ -97,6 +97,139 @@ struct ItineraryEngineTests {
         }
     }
 
+    // MARK: - syncDays Tests
+
+    @Test("Extend trip end date — old days preserved, new days added")
+    func testSyncDaysExtendEnd() {
+        let mar10 = makeDate(year: 2026, month: 3, day: 10)
+        let mar12 = makeDate(year: 2026, month: 3, day: 12)
+        let mar14 = makeDate(year: 2026, month: 3, day: 14)
+
+        let existingDays = [
+            Day(tripId: UUID(), date: mar10, dayNumber: 1, stops: []),
+            Day(tripId: UUID(), date: makeDate(year: 2026, month: 3, day: 11), dayNumber: 2, stops: []),
+            Day(tripId: UUID(), date: mar12, dayNumber: 3, stops: []),
+        ]
+
+        let result = ItineraryEngine.syncDays(
+            newStart: mar10,
+            newEnd: mar14,
+            existingDays: existingDays
+        )
+
+        // All 3 existing days kept
+        #expect(result.keepDayIDs.count == 3)
+        for day in existingDays {
+            #expect(result.keepDayIDs.contains(day.id))
+        }
+        // No days removed
+        #expect(result.removeDayIDs.isEmpty)
+        // 2 new days needed (Mar 13, Mar 14)
+        #expect(result.datesToAdd.count == 2)
+    }
+
+    @Test("Move start date forward — first days removed, rest preserved")
+    func testSyncDaysMoveStartForward() {
+        let mar10 = makeDate(year: 2026, month: 3, day: 10)
+        let mar11 = makeDate(year: 2026, month: 3, day: 11)
+        let mar12 = makeDate(year: 2026, month: 3, day: 12)
+        let mar14 = makeDate(year: 2026, month: 3, day: 14)
+
+        let day1 = Day(tripId: UUID(), date: mar10, dayNumber: 1)
+        let day2 = Day(tripId: UUID(), date: mar11, dayNumber: 2)
+        let day3 = Day(tripId: UUID(), date: mar12, dayNumber: 3)
+
+        let result = ItineraryEngine.syncDays(
+            newStart: mar12,
+            newEnd: mar14,
+            existingDays: [day1, day2, day3]
+        )
+
+        // Only day3 (Mar 12) kept
+        #expect(result.keepDayIDs == [day3.id])
+        // day1 and day2 removed
+        #expect(result.removeDayIDs == [day1.id, day2.id])
+        // 2 new days needed (Mar 13, Mar 14)
+        #expect(result.datesToAdd.count == 2)
+    }
+
+    @Test("Move start date earlier — new day added at front, rest preserved")
+    func testSyncDaysMoveStartEarlier() {
+        let mar10 = makeDate(year: 2026, month: 3, day: 10)
+        let mar11 = makeDate(year: 2026, month: 3, day: 11)
+        let mar12 = makeDate(year: 2026, month: 3, day: 12)
+        let mar8 = makeDate(year: 2026, month: 3, day: 8)
+
+        let day1 = Day(tripId: UUID(), date: mar10, dayNumber: 1)
+        let day2 = Day(tripId: UUID(), date: mar11, dayNumber: 2)
+        let day3 = Day(tripId: UUID(), date: mar12, dayNumber: 3)
+
+        let result = ItineraryEngine.syncDays(
+            newStart: mar8,
+            newEnd: mar12,
+            existingDays: [day1, day2, day3]
+        )
+
+        // All 3 existing days kept
+        #expect(result.keepDayIDs.count == 3)
+        // None removed
+        #expect(result.removeDayIDs.isEmpty)
+        // 2 new days at front (Mar 8, Mar 9)
+        #expect(result.datesToAdd.count == 2)
+    }
+
+    @Test("Shrink both ends — only middle days preserved")
+    func testSyncDaysShrinkBothEnds() {
+        let mar10 = makeDate(year: 2026, month: 3, day: 10)
+        let mar11 = makeDate(year: 2026, month: 3, day: 11)
+        let mar12 = makeDate(year: 2026, month: 3, day: 12)
+        let mar13 = makeDate(year: 2026, month: 3, day: 13)
+        let mar14 = makeDate(year: 2026, month: 3, day: 14)
+
+        let day1 = Day(tripId: UUID(), date: mar10, dayNumber: 1)
+        let day2 = Day(tripId: UUID(), date: mar11, dayNumber: 2)
+        let day3 = Day(tripId: UUID(), date: mar12, dayNumber: 3)
+        let day4 = Day(tripId: UUID(), date: mar13, dayNumber: 4)
+        let day5 = Day(tripId: UUID(), date: mar14, dayNumber: 5)
+
+        let result = ItineraryEngine.syncDays(
+            newStart: mar11,
+            newEnd: mar13,
+            existingDays: [day1, day2, day3, day4, day5]
+        )
+
+        // Middle 3 days kept
+        #expect(result.keepDayIDs == [day2.id, day3.id, day4.id])
+        // First and last removed
+        #expect(result.removeDayIDs == [day1.id, day5.id])
+        // No new days needed
+        #expect(result.datesToAdd.isEmpty)
+    }
+
+    @Test("No overlap — all days replaced")
+    func testSyncDaysNoOverlap() {
+        let mar10 = makeDate(year: 2026, month: 3, day: 10)
+        let mar11 = makeDate(year: 2026, month: 3, day: 11)
+        let mar20 = makeDate(year: 2026, month: 3, day: 20)
+        let mar22 = makeDate(year: 2026, month: 3, day: 22)
+
+        let day1 = Day(tripId: UUID(), date: mar10, dayNumber: 1)
+        let day2 = Day(tripId: UUID(), date: mar11, dayNumber: 2)
+
+        let result = ItineraryEngine.syncDays(
+            newStart: mar20,
+            newEnd: mar22,
+            existingDays: [day1, day2]
+        )
+
+        // No days kept
+        #expect(result.keepDayIDs.isEmpty)
+        // Both old days removed
+        #expect(result.removeDayIDs == [day1.id, day2.id])
+        // 3 brand new days
+        #expect(result.datesToAdd.count == 3)
+    }
+
     @Test("Trip stats computes totals correctly")
     func testTripStats() {
         let dayId1 = UUID()

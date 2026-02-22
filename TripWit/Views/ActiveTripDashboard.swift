@@ -5,7 +5,7 @@ import TripCore
 
 struct ActiveTripDashboard: View {
 
-    let trip: TripEntity
+    @ObservedObject var trip: TripEntity
 
     @State private var isExpanded: Bool = true
     @State private var showingAddStop: Bool = false

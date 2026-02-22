@@ -16,6 +16,7 @@ struct EditTripSheet: View {
     @State private var notes: String
     @State private var status: TripStatus
     @State private var showingDateChangeWarning = false
+    @State private var dateChangeWarningMessage = ""
     @State private var budgetText: String
     @State private var budgetCurrency: String
 
@@ -110,11 +111,11 @@ struct EditTripSheet: View {
             }
             .alert("Change Trip Dates?", isPresented: $showingDateChangeWarning) {
                 Button("Change Dates", role: .destructive) {
-                    saveChanges(regenerateDays: true)
+                    saveChanges(syncDays: true)
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("Changing dates will regenerate the day-by-day plan. All existing stops and comments will be removed.")
+                Text(dateChangeWarningMessage)
             }
         }
     }
@@ -128,19 +129,32 @@ struct EditTripSheet: View {
 
     private func attemptSave() {
         let datesChanged = trip.wrappedStartDate != startDate || trip.wrappedEndDate != endDate
-        let hasStops = trip.daysArray.contains { !$0.stopsArray.isEmpty }
 
-        if datesChanged && hasStops {
-            showingDateChangeWarning = true
+        if datesChanged {
+            let manager = DataManager(context: viewContext)
+            let lostDays = manager.daysWithStopsOutsideRange(for: trip, newStart: startDate, newEnd: endDate)
+
+            if lostDays > 0 {
+                // Some days with stops will be removed — warn the user
+                let dayWord = lostDays == 1 ? "day" : "days"
+                dateChangeWarningMessage = "\(lostDays) \(dayWord) with stops will be removed (outside the new date range). Days within the new range will keep their stops."
+                showingDateChangeWarning = true
+            } else {
+                // No data loss — sync silently
+                saveChanges(syncDays: true)
+            }
         } else {
-            saveChanges(regenerateDays: datesChanged)
+            saveChanges(syncDays: false)
         }
     }
 
-    private func saveChanges(regenerateDays: Bool) {
+    private func saveChanges(syncDays: Bool) {
         let manager = DataManager(context: viewContext)
+        let oldDestination = trip.destination ?? ""
+        let newDestination = destination.trimmingCharacters(in: .whitespaces)
+
         trip.name = name.trimmingCharacters(in: .whitespaces)
-        trip.destination = destination.trimmingCharacters(in: .whitespaces)
+        trip.destination = newDestination
         trip.startDate = startDate
         trip.endDate = endDate
         trip.notes = notes.trimmingCharacters(in: .whitespaces)
@@ -148,8 +162,16 @@ struct EditTripSheet: View {
         trip.budgetAmount = Double(budgetText) ?? 0
         trip.budgetCurrencyCode = budgetCurrency
 
-        if regenerateDays {
-            manager.generateDays(for: trip)
+        // Update day locations that still match the old destination to the new one.
+        // Custom per-day locations (e.g. multi-city trips) are left alone.
+        if !oldDestination.isEmpty && oldDestination != newDestination {
+            for day in trip.daysArray where day.location == oldDestination {
+                day.location = newDestination
+            }
+        }
+
+        if syncDays {
+            manager.syncDays(for: trip)
         }
 
         manager.updateTrip(trip)

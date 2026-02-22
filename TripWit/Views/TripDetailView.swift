@@ -29,7 +29,6 @@ struct TripDetailView: View {
     @State private var isExportingCalendar = false
     @State private var draggingStopID: String?
     @State private var dropTargetDayID: UUID?
-    @State private var showingSharingDiagnostic = false
 
     private let sharingService = CloudKitSharingService()
 
@@ -148,9 +147,6 @@ struct TripDetailView: View {
         }
         .sheet(item: $dayForLocationEdit) { day in
             SetDayLocationSheet(day: day, trip: trip)
-        }
-        .sheet(isPresented: $showingSharingDiagnostic) {
-            SharingDiagnosticView(trip: trip)
         }
         .alert("Day Description", isPresented: Binding(
             get: { dayForNotesEdit != nil },
@@ -275,12 +271,6 @@ struct TripDetailView: View {
                         Label("Add to Calendar", systemImage: "calendar.badge.plus")
                     }
                     .disabled(isExportingCalendar)
-                    Divider()
-                    Button {
-                        showingSharingDiagnostic = true
-                    } label: {
-                        Label("Share Diagnostic", systemImage: "ant")
-                    }
                 } label: {
                     HStack(spacing: 4) {
                         if sharingService.isShared(trip) {

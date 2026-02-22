@@ -67,12 +67,14 @@ struct SettingsView: View {
 
             // Data Management
             Section {
+                #if DEBUG
                 Button {
                     loadSampleData()
                 } label: {
                     Label("Load Sample Data", systemImage: "tray.and.arrow.down")
                 }
                 .disabled(!allTrips.isEmpty)
+                #endif
 
                 if !allTrips.isEmpty {
                     Button(role: .destructive) {
@@ -85,21 +87,31 @@ struct SettingsView: View {
             } header: {
                 Text("Data Management")
             } footer: {
+                #if DEBUG
                 if allTrips.isEmpty {
                     Text("Load sample trips to explore the app.")
                 } else {
                     Text("Deleting all trips cannot be undone.")
                 }
+                #else
+                if !allTrips.isEmpty {
+                    Text("Deleting all trips cannot be undone.")
+                }
+                #endif
             }
 
             // About
             Section {
-                Link(destination: URL(string: "https://kevinbuckley.github.io/tripwit/support.html")!) {
-                    Label("Help & Support", systemImage: "questionmark.circle")
+                if let supportURL = URL(string: "https://kevinbuckley.github.io/tripwit/support.html") {
+                    Link(destination: supportURL) {
+                        Label("Help & Support", systemImage: "questionmark.circle")
+                    }
                 }
 
-                Link(destination: URL(string: "https://kevinbuckley.github.io/tripwit/privacy.html")!) {
-                    Label("Privacy Policy", systemImage: "hand.raised")
+                if let privacyURL = URL(string: "https://kevinbuckley.github.io/tripwit/privacy.html") {
+                    Link(destination: privacyURL) {
+                        Label("Privacy Policy", systemImage: "hand.raised")
+                    }
                 }
             } header: {
                 Text("About")

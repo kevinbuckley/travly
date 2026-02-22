@@ -96,7 +96,13 @@ struct TripWitApp: App {
                 )
 
                 appLog.info("[SHARE-ACCEPT] Successfully accepted share!")
+
+                // Give CloudKit a moment to sync the shared records into the local store
+                try? await Task.sleep(for: .seconds(2))
+
+                // Force the viewContext to pick up data from the shared store
                 await MainActor.run {
+                    persistence.viewContext.refreshAllObjects()
                     shareAcceptAlert = ShareAcceptAlert(
                         title: "Trip Joined!",
                         message: "You've successfully joined the shared trip. It will appear in your trips list shortly."
@@ -189,12 +195,18 @@ class SceneDelegate: NSObject, UIWindowSceneDelegate {
         userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata
     ) {
         appLog.info("[SHARE-ACCEPT] System accepted share via userDidAcceptCloudKitShareWith")
-        let sharingService = CloudKitSharingService()
+        let persistence = PersistenceController.shared
+        let sharingService = CloudKitSharingService(persistence: persistence)
         Task {
             do {
                 try await sharingService.acceptShare(cloudKitShareMetadata)
+                appLog.info("[SHARE-ACCEPT] Share accepted via SceneDelegate, refreshing viewContext")
+                try? await Task.sleep(for: .seconds(2))
+                await MainActor.run {
+                    persistence.viewContext.refreshAllObjects()
+                }
             } catch {
-                print("Failed to accept CloudKit share: \(error)")
+                appLog.error("[SHARE-ACCEPT] Failed to accept CloudKit share: \(error)")
             }
         }
     }
