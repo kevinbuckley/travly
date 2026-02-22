@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -121,7 +121,7 @@
 		68EC9EC922768C72B8E5CA54 /* LocateStopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocateStopSheet.swift; sourceTree = "<group>"; };
 		6D513CC9C1CE18397D4704BD /* ActiveTripDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveTripDashboard.swift; sourceTree = "<group>"; };
 		6E6C8D5566E0C3FA8E805713 /* LocationSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSearchView.swift; sourceTree = "<group>"; };
-		6F7F2396E797453C2EC9993C /* Travly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Travly.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F7F2396E797453C2EC9993C /* Travly.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Travly.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		739FD0FE659B6D018A5652F0 /* BookingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingDetailView.swift; sourceTree = "<group>"; };
 		7642C05A6780DBB1AE81A273 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		76BCEF2C1126B6E24195FC0B /* DayEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayEntity.swift; sourceTree = "<group>"; };
@@ -131,7 +131,7 @@
 		871FC162371D442485362A6E /* ShareSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheetView.swift; sourceTree = "<group>"; };
 		89B881F194945D5D93EBCB16 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		8D73EE22C410FC622A996026 /* AddBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookingSheet.swift; sourceTree = "<group>"; };
-		91B2F6DC5B7551F1ACC36DBA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		91B2F6DC5B7551F1ACC36DBA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		9231EB44A71B070AAAF41817 /* TripListItemEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripListItemEntity.swift; sourceTree = "<group>"; };
 		96E3E46DBD876423B75E5B58 /* TripCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TripCore; path = Packages/TripCore; sourceTree = SOURCE_ROOT; };
 		98A8D7C5042884D295BEA112 /* BudgetSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetSection.swift; sourceTree = "<group>"; };
@@ -385,6 +385,12 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					CE684E17516122EEFAB1E515 = {
+						DevelopmentTeam = A6VYGLF4DB;
+						ProvisioningStyle = Automatic;
+					};
+				};
 			};
 			buildConfigurationList = AFD32ABDCC6E10E0CC0A5C89 /* Build configuration list for PBXProject "Travly" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -399,6 +405,7 @@
 			packageReferences = (
 				ADEB5E83657B0D393810613A /* XCLocalSwiftPackageReference "Packages/TripCore" */,
 			);
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -519,9 +526,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Travly/Travly.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 51;
+				CURRENT_PROJECT_VERSION = 53;
 				DEVELOPMENT_TEAM = A6VYGLF4DB;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Travly/Info.plist;
@@ -541,7 +548,6 @@
 				);
 				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kevinbuckley.travelplanner;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -553,9 +559,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Travly/Travly.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 51;
+				CURRENT_PROJECT_VERSION = 53;
 				DEVELOPMENT_TEAM = A6VYGLF4DB;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Travly/Info.plist;
@@ -575,7 +581,6 @@
 				);
 				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kevinbuckley.travelplanner;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = 1;
