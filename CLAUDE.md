@@ -55,3 +55,34 @@ project.yml                 ← XcodeGen project spec
 - Use `public` access control on TripCore types that the app needs
 - iOS 17+ minimum deployment target
 - Swift 6 strict concurrency
+- **Never upload to TestFlight unless explicitly asked**
+
+## File Format Rules (.tripwit)
+- `.tripwit` files (JSON via `TripTransfer`) must always be **forwards compatible**
+- Never remove fields from `TripTransfer` structs — only add new optional fields with defaults
+- New fields must have defaults so old files still decode correctly (`var foo: String = ""`)
+- Bump `TripTransfer.currentSchemaVersion` when making structural changes
+- Date encoding is `iso8601` — do not change
+
+## Data Safety Rules
+- **Never destroy or migrate away existing Core Data stores** — users' trips live in `Private.sqlite` and `Shared.sqlite` in Application Support
+- Do not change the `NSPersistentCloudKitContainer(name:)` value — it determines the store filename; changing it orphans existing data
+- Do not change the CloudKit container identifier (`iCloud.com.kevinbuckley.travelplanner`) — it is linked to the App Store app
+- Any Core Data model changes must be additive (new optional attributes only) — no renames, no deletes, no type changes
+- If a migration is ever needed, use lightweight migration and test it explicitly before shipping
+
+## Deployment
+- **Archive:** `xcodebuild -project TripWit.xcodeproj -scheme TripWit -configuration Release -destination 'generic/platform=iOS' -archivePath build/TripWit.xcarchive archive`
+- **TestFlight upload:** `xcodebuild -exportArchive -archivePath build/TripWit.xcarchive -exportOptionsPlist build/ExportOptions.plist -exportPath build/TripWitExport`
+- **Device deploy (no TestFlight):** `xcodebuild -destination 'platform=iOS,id=<UDID>'` — find UDID with `xcrun xctrace list devices`
+- Build number lives in `project.yml` → `CURRENT_PROJECT_VERSION` — increment for every TestFlight upload
+
+## App Icon
+- Single 1024×1024 PNG at `TripWit/Assets.xcassets/AppIcon.appiconset/AppIcon.png`
+- No rounded corners, no transparency — iOS applies rounding automatically
+
+## iMessage / CloudKit Sharing
+- **Do not use UICloudSharingController for new shares** — documented iOS spinner bug in Messages
+- New shares: pre-create `CKShare` via `container.share([trip], to: nil)`, wrap URL as `tripwit://share?url=<encoded>`, send via `MFMessageComposeViewController` directly
+- Existing shares: `UICloudSharingController` is fine for participant management only
+- CKError 10/2007 "Permission Failure": Developer Portal → App ID → iCloud → uncheck/re-check container → save → regenerate provisioning profiles in Xcode
