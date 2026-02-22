@@ -174,6 +174,7 @@ struct AddBookingSheet: View {
         }
 
         booking.trip = trip
+        trip.updatedAt = Date()
         try? viewContext.save()
         dismiss()
     }

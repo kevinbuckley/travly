@@ -80,6 +80,7 @@ struct TripListsSection: View {
             Button {
                 if canEdit {
                     item.isChecked.toggle()
+                    trip.updatedAt = Date()
                     try? viewContext.save()
                 }
             } label: {
@@ -240,6 +241,7 @@ struct TripListsSection: View {
     private func createList(name: String, icon: String) {
         let list = TripListEntity.create(in: viewContext, name: name, icon: icon, sortOrder: trip.listsArray.count)
         list.trip = trip
+        trip.updatedAt = Date()
         try? viewContext.save()
     }
 
@@ -249,6 +251,7 @@ struct TripListsSection: View {
         guard !trimmed.isEmpty else { return }
         let item = TripListItemEntity.create(in: viewContext, text: trimmed, sortOrder: list.itemsArray.count)
         item.list = list
+        trip.updatedAt = Date()
         try? viewContext.save()
         newItemTexts[listID] = ""
     }
@@ -258,6 +261,7 @@ struct TripListsSection: View {
         for index in offsets {
             viewContext.delete(items[index])
         }
+        trip.updatedAt = Date()
         try? viewContext.save()
     }
 

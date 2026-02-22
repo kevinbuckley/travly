@@ -26,6 +26,7 @@ struct AddStopSheet: View {
     @State private var arrivalTime = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
     @State private var useDepartureTime = false
     @State private var departureTime = Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: Date()) ?? Date()
+    @State private var showingAISuggest = false
 
     // Only require a name — location is optional for planning
     private var isValid: Bool {
@@ -39,6 +40,7 @@ struct AddStopSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                aiSuggestSection
                 detailsSection
                 locationSection
                 timesSection
@@ -61,7 +63,56 @@ struct AddStopSheet: View {
                     name = newValue
                 }
             }
+            .sheet(isPresented: $showingAISuggest) {
+                aiSuggestSheet
+            }
         }
+    }
+
+    // MARK: - AI Suggest
+
+    @ViewBuilder
+    private var aiSuggestSection: some View {
+        #if canImport(FoundationModels)
+        if #available(iOS 26, *), AITripPlanner.isDeviceSupported {
+            Section {
+                Button {
+                    showingAISuggest = true
+                } label: {
+                    HStack {
+                        Image(systemName: "sparkles")
+                            .foregroundStyle(.purple)
+                        Text("Suggest with AI")
+                            .foregroundStyle(.purple)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            } footer: {
+                Text("Get place ideas based on nearby stops or your destination.")
+                    .font(.caption2)
+            }
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private var aiSuggestSheet: some View {
+        #if canImport(FoundationModels)
+        if #available(iOS 26, *) {
+            AISuggestForAddStopSheet(day: day) { suggestion in
+                name = suggestion.name
+                category = AITripPlanner.mapCategory(suggestion.category)
+                notes = suggestion.reason
+                // Pre-fill the location search name so the user can search for it
+                locationName = suggestion.name
+            }
+        }
+        #else
+        Text("Apple Intelligence requires iOS 26")
+        #endif
     }
 
     // MARK: - Sections

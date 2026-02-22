@@ -222,6 +222,7 @@ struct EditBookingSheet: View {
             booking.checkOutDate = nil
         }
 
+        booking.trip?.updatedAt = Date()
         try? viewContext.save()
         dismiss()
     }

@@ -13,7 +13,6 @@ struct TripDetailView: View {
     @State private var showingEditTrip = false
     @State private var showingAddStop = false
     @State private var selectedDayForStop: DayEntity?
-    @State private var selectedDayForAI: DayEntity?
     @State private var showingStartConfirmation = false
     @State private var showingCompleteConfirmation = false
     @State private var showingAddBooking = false
@@ -30,6 +29,7 @@ struct TripDetailView: View {
     @State private var isExportingCalendar = false
     @State private var draggingStopID: String?
     @State private var dropTargetDayID: UUID?
+    @State private var showingSharingDiagnostic = false
 
     private let sharingService = CloudKitSharingService()
 
@@ -137,9 +137,6 @@ struct TripDetailView: View {
         .sheet(item: $selectedDayForStop) { day in
             AddStopSheet(day: day)
         }
-        .sheet(item: $selectedDayForAI) { day in
-            aiSuggestSheet(day: day)
-        }
         .sheet(isPresented: $showingAddBooking) {
             AddBookingSheet(trip: trip)
         }
@@ -152,6 +149,9 @@ struct TripDetailView: View {
         .sheet(item: $dayForLocationEdit) { day in
             SetDayLocationSheet(day: day, trip: trip)
         }
+        .sheet(isPresented: $showingSharingDiagnostic) {
+            SharingDiagnosticView(trip: trip)
+        }
         .alert("Day Description", isPresented: Binding(
             get: { dayForNotesEdit != nil },
             set: { if !$0 { dayForNotesEdit = nil } }
@@ -160,6 +160,7 @@ struct TripDetailView: View {
             Button("Save") {
                 if let day = dayForNotesEdit {
                     day.notes = editingDayNotes.trimmingCharacters(in: .whitespaces)
+                    trip.updatedAt = Date()
                     try? viewContext.save()
                     dayForNotesEdit = nil
                 }
@@ -167,6 +168,7 @@ struct TripDetailView: View {
             Button("Clear", role: .destructive) {
                 if let day = dayForNotesEdit {
                     day.notes = ""
+                    trip.updatedAt = Date()
                     try? viewContext.save()
                     dayForNotesEdit = nil
                 }
@@ -218,6 +220,7 @@ struct TripDetailView: View {
             Button("Delete", role: .destructive) {
                 if let booking = bookingToDelete {
                     viewContext.delete(booking)
+                    trip.updatedAt = Date()
                     try? viewContext.save()
                     bookingToDelete = nil
                 }
@@ -272,6 +275,12 @@ struct TripDetailView: View {
                         Label("Add to Calendar", systemImage: "calendar.badge.plus")
                     }
                     .disabled(isExportingCalendar)
+                    Divider()
+                    Button {
+                        showingSharingDiagnostic = true
+                    } label: {
+                        Label("Share Diagnostic", systemImage: "ant")
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         if sharingService.isShared(trip) {
@@ -336,6 +345,7 @@ struct TripDetailView: View {
             Button {
                 if canEdit {
                     todo.isCompleted.toggle()
+                    trip.updatedAt = Date()
                     try? viewContext.save()
                 }
             } label: {
@@ -583,6 +593,7 @@ struct TripDetailView: View {
         for index in offsets {
             viewContext.delete(bookings[index])
         }
+        trip.updatedAt = Date()
         try? viewContext.save()
     }
 
@@ -782,8 +793,6 @@ struct TripDetailView: View {
                         .font(.subheadline)
                         .foregroundStyle(.blue)
                 }
-
-                aiSuggestRow(day: day)
             }
 
             openDayInMapsButton(day: day)
@@ -980,39 +989,6 @@ struct TripDetailView: View {
             }
             .buttonStyle(.plain)
         }
-    }
-
-    // MARK: - AI Suggestions
-
-    @ViewBuilder
-    private func aiSuggestRow(day: DayEntity) -> some View {
-        #if canImport(FoundationModels)
-        if #available(iOS 26, *), AITripPlanner.isDeviceSupported {
-            Button {
-                selectedDayForAI = day
-            } label: {
-                Label("Suggest with AI", systemImage: "sparkles")
-                    .font(.subheadline)
-                    .foregroundStyle(.purple)
-            }
-        }
-        #endif
-    }
-
-    @ViewBuilder
-    private func aiSuggestSheet(day: DayEntity) -> some View {
-        #if canImport(FoundationModels)
-        if #available(iOS 26, *) {
-            let dest = day.wrappedLocation.isEmpty ? trip.wrappedDestination : day.wrappedLocation
-            SuggestStopsSheet(
-                day: day,
-                destination: dest,
-                totalDays: trip.durationInDays
-            )
-        }
-        #else
-        Text("Apple Intelligence requires iOS 26")
-        #endif
     }
 
     // MARK: - Open Day in Apple Maps

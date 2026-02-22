@@ -32,6 +32,7 @@ struct LocationSearchView: View {
     @State private var searchTask: Task<Void, Never>?
     @State private var hasSelected = false
     @State private var searchError: String?
+    @State private var showingFullscreenMap = false
 
     private var hasLocation: Bool {
         selectedLatitude != 0 || selectedLongitude != 0
@@ -194,8 +195,33 @@ struct LocationSearchView: View {
         }
         .frame(height: 160)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(alignment: .topTrailing) {
+            if hasLocation {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .padding(5)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .padding(6)
+            }
+        }
+        .onTapGesture {
+            if hasLocation {
+                showingFullscreenMap = true
+            }
+        }
         .padding(.horizontal)
         .padding(.vertical, 8)
+        .fullScreenCover(isPresented: $showingFullscreenMap) {
+            FullscreenMapSheet(
+                coordinate: CLLocationCoordinate2D(
+                    latitude: selectedLatitude,
+                    longitude: selectedLongitude
+                ),
+                markerTitle: selectedName.isEmpty ? "Selected Location" : selectedName
+            )
+        }
     }
 
     // MARK: - Search Logic

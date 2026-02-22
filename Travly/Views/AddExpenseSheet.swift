@@ -90,6 +90,7 @@ struct AddExpenseSheet: View {
             expense.category = category
             expense.dateIncurred = dateIncurred
             expense.notes = notes.trimmingCharacters(in: .whitespaces)
+            expense.trip?.updatedAt = Date()
             try? viewContext.save()
         } else {
             let manager = DataManager(context: viewContext)

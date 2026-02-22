@@ -195,6 +195,7 @@ struct TimelineStopRow: View {
     private func toggleVisited() {
         stop.isVisited.toggle()
         stop.visitedAt = stop.isVisited ? Date() : nil
+        stop.day?.trip?.updatedAt = Date()
         try? viewContext.save()
     }
 

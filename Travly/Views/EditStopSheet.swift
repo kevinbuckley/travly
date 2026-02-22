@@ -140,6 +140,7 @@ struct EditStopSheet: View {
         stop.departureTime = useDepartureTime ? departureTime : nil
         stop.latitude = latitude
         stop.longitude = longitude
+        stop.day?.trip?.updatedAt = Date()
         try? viewContext.save()
 
         // Re-populate place details if location changed
@@ -169,6 +170,7 @@ struct EditStopSheet: View {
                     let pm = item.placemark
                     let parts = [pm.subThoroughfare, pm.thoroughfare, pm.locality, pm.administrativeArea, pm.postalCode].compactMap { $0 }
                     if !parts.isEmpty { stop.address = parts.joined(separator: ", ") }
+                    stop.day?.trip?.updatedAt = Date()
                     try? viewContext.save()
                 }
             }

@@ -16,6 +16,7 @@ struct LocateStopSheet: View {
 
     @State private var planner = AITripPlanner()
     @State private var hasApplied = false
+    @State private var showingFullscreenMap = false
 
     private var destination: String {
         stop.day?.trip?.wrappedDestination ?? ""
@@ -85,9 +86,9 @@ struct LocateStopSheet: View {
     }
 
     private func resultView(_ place: LocatedPlace) -> some View {
-        List {
+        let coord = CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude)
+        return List {
             Section {
-                let coord = CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude)
                 let position = MapCameraPosition.region(MKCoordinateRegion(
                     center: coord,
                     span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
@@ -97,6 +98,18 @@ struct LocateStopSheet: View {
                 }
                 .frame(height: 200)
                 .listRowInsets(EdgeInsets())
+                .overlay(alignment: .topTrailing) {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .padding(6)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .padding(8)
+                }
+                .onTapGesture {
+                    showingFullscreenMap = true
+                }
             }
 
             Section {
@@ -126,6 +139,12 @@ struct LocateStopSheet: View {
             }
         }
         .listStyle(.insetGrouped)
+        .fullScreenCover(isPresented: $showingFullscreenMap) {
+            FullscreenMapSheet(
+                coordinate: coord,
+                markerTitle: place.name
+            )
+        }
     }
 
     private var appliedRow: some View {
@@ -167,6 +186,7 @@ struct LocateStopSheet: View {
     private func applyLocation(_ place: LocatedPlace) {
         stop.latitude = place.latitude
         stop.longitude = place.longitude
+        stop.day?.trip?.updatedAt = Date()
         try? viewContext.save()
         hasApplied = true
     }

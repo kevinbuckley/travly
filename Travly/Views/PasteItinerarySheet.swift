@@ -755,6 +755,7 @@ struct PasteItinerarySheet: View {
                     await MainActor.run {
                         stop.latitude = location.coordinate.latitude
                         stop.longitude = location.coordinate.longitude
+                        stop.day?.trip?.updatedAt = Date()
                         try? viewContext.save()
                     }
                 }

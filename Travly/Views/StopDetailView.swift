@@ -19,6 +19,7 @@ struct StopDetailView: View {
     @State private var newLinkTitle = ""
     @State private var showingAddLink = false
     @State private var newTodoText = ""
+    @State private var showingFullscreenMap = false
 
     private var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
@@ -49,6 +50,18 @@ struct StopDetailView: View {
                     }
                     .frame(height: 220)
                     .listRowInsets(EdgeInsets())
+                    .overlay(alignment: .topTrailing) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .padding(6)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .padding(8)
+                    }
+                    .onTapGesture {
+                        showingFullscreenMap = true
+                    }
                 }
             } else {
                 locateSection
@@ -172,6 +185,22 @@ struct StopDetailView: View {
         .sheet(isPresented: $showingLocateAI) {
             locateAISheet
         }
+        .fullScreenCover(isPresented: $showingFullscreenMap) {
+            FullscreenMapSheet(
+                coordinate: coordinate,
+                markerTitle: stop.wrappedName,
+                markerTint: markerColor,
+                additionalStops: otherDayStops
+            )
+        }
+    }
+
+    /// Other stops on the same day (with coordinates) for map context.
+    private var otherDayStops: [StopEntity] {
+        guard let day = stop.day else { return [] }
+        return day.stopsArray.filter {
+            $0.id != stop.id && ($0.latitude != 0 || $0.longitude != 0)
+        }
     }
 
     // MARK: - Visited Content
@@ -205,6 +234,7 @@ struct StopDetailView: View {
                         stop.isVisited = false
                         stop.visitedAt = nil
                         stop.rating = 0
+                        stop.day?.trip?.updatedAt = Date()
                         try? viewContext.save()
                     }
                     .font(.subheadline)
@@ -218,6 +248,7 @@ struct StopDetailView: View {
                     Button {
                         if canEdit {
                             stop.rating = Int32(star)
+                            stop.day?.trip?.updatedAt = Date()
                             try? viewContext.save()
                         }
                     } label: {
@@ -257,6 +288,7 @@ struct StopDetailView: View {
                     stop.isVisited = true
                     stop.visitedAt = Date()
                     stop.rating = Int32(stars)
+                    stop.day?.trip?.updatedAt = Date()
                     try? viewContext.save()
                 }
             }
@@ -264,6 +296,7 @@ struct StopDetailView: View {
                 stop.isVisited = true
                 stop.visitedAt = Date()
                 stop.rating = 0
+                stop.day?.trip?.updatedAt = Date()
                 try? viewContext.save()
             }
             Button("Cancel", role: .cancel) { }
@@ -355,6 +388,7 @@ struct StopDetailView: View {
             sortOrder: stop.linksArray.count
         )
         link.stop = stop
+        stop.day?.trip?.updatedAt = Date()
         try? viewContext.save()
         newLinkURL = ""
         newLinkTitle = ""
@@ -365,6 +399,7 @@ struct StopDetailView: View {
         for index in offsets {
             viewContext.delete(links[index])
         }
+        stop.day?.trip?.updatedAt = Date()
         try? viewContext.save()
     }
 
@@ -377,6 +412,7 @@ struct StopDetailView: View {
                     Button {
                         if canEdit {
                             todo.isCompleted.toggle()
+                            stop.day?.trip?.updatedAt = Date()
                             try? viewContext.save()
                         }
                     } label: {
@@ -438,6 +474,7 @@ struct StopDetailView: View {
             sortOrder: stop.todosArray.count
         )
         todo.stop = stop
+        stop.day?.trip?.updatedAt = Date()
         try? viewContext.save()
         newTodoText = ""
     }
@@ -447,6 +484,7 @@ struct StopDetailView: View {
         for index in offsets {
             viewContext.delete(todos[index])
         }
+        stop.day?.trip?.updatedAt = Date()
         try? viewContext.save()
     }
 
@@ -517,6 +555,7 @@ struct StopDetailView: View {
         guard !trimmed.isEmpty else { return }
         let comment = CommentEntity.create(in: viewContext, text: trimmed)
         comment.stop = stop
+        stop.day?.trip?.updatedAt = Date()
         try? viewContext.save()
         newCommentText = ""
     }
@@ -527,6 +566,7 @@ struct StopDetailView: View {
             let comment = comments[index]
             viewContext.delete(comment)
         }
+        stop.day?.trip?.updatedAt = Date()
         try? viewContext.save()
     }
 

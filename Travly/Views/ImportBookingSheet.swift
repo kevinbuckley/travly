@@ -173,6 +173,7 @@ struct ImportBookingSheet: View {
 
             booking.trip = trip
         }
+        trip.updatedAt = Date()
         try? viewContext.save()
         addedCount = parsedBookings.count
         parsedBookings = []

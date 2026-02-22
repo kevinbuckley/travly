@@ -152,6 +152,7 @@ struct SetDayLocationSheet: View {
         for d in daysToUpdate {
             d.location = loc
         }
+        trip.updatedAt = Date()
         try? viewContext.save()
     }
 }

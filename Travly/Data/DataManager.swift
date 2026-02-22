@@ -121,6 +121,7 @@ final class DataManager {
     func toggleVisited(_ stop: StopEntity) {
         stop.isVisited.toggle()
         stop.visitedAt = stop.isVisited ? Date() : nil
+        stop.day?.trip?.updatedAt = Date()
         try? context.save()
     }
 
@@ -166,11 +167,13 @@ final class DataManager {
             sortOrder: trip.expensesArray.count
         )
         expense.trip = trip
+        trip.updatedAt = Date()
         try? context.save()
         return expense
     }
 
     func deleteExpense(_ expense: ExpenseEntity) {
+        expense.trip?.updatedAt = Date()
         context.delete(expense)
         try? context.save()
     }
