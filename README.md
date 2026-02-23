@@ -24,14 +24,14 @@ TripWit is the **Apple Notes of travel planning** — private, fast, works offli
 
 | | TripWit | Wanderlog | TripIt | Lambus |
 |---|---|---|---|---|
-| **AI engine** | On-device (Apple Intelligence) | Cloud-based (Pro) | Limited | Limited |
+| **AI engine** | On-device (Apple Intelligence) | Cloud-based | Limited | None |
 | **Privacy** | 100% on-device, zero cloud AI | Cloud processing | Cloud processing | Cloud processing |
-| **Ads** | None, ever | Free tier has ads | Ads in free tier | None |
-| **Subscription** | Free, no paywall | Freemium (~$50/yr) | Freemium ($49/yr) | Freemium (~$24/yr) |
+| **Ads** | None, ever | None | Ads in free tier | Ads in free tier |
+| **Subscription** | Free, no paywall | Freemium (~$35/yr) | Freemium ($49/yr) | Freemium (~$24/yr) |
 | **Account required** | No | Yes | Yes | Yes |
-| **Offline** | Full (local DB) | Basic free / Pro full | Full | Documents only |
+| **Offline** | Full (local DB) | Basic free / Pro full | Itinerary only | Documents free / Full Pro |
 | **iCloud Sync** | Yes (automatic) | Cross-device sync | Cross-device sync | Cross-device sync |
-| **Collaboration** | Yes (iCloud sharing) | Pro only | Pro only | Yes |
+| **Collaboration** | Yes (iCloud sharing) | Yes (free) | Yes (basic free) | Yes |
 
 ### Unique advantages
 
