@@ -100,8 +100,23 @@ struct ContentView: View {
             NavigationStack(path: $tripsNavPath) {
                 TripListView()
                     .navigationDestination(for: UUID.self) { tripID in
-                        if let trip = allTrips.first(where: { $0.id == tripID }) {
+                        if let trip = allTrips.first(where: { $0.id == tripID && !$0.isDeleted && $0.managedObjectContext != nil }) {
                             TripDetailView(trip: trip)
+                        } else {
+                            VStack(spacing: 16) {
+                                Image(systemName: "trash.circle")
+                                    .font(.system(size: 48))
+                                    .foregroundStyle(.secondary)
+                                Text("Trip No Longer Available")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                Text("This trip was removed or the owner stopped sharing it.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding()
+                            .navigationTitle("Trip Removed")
                         }
                     }
             }

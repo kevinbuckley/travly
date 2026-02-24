@@ -100,6 +100,19 @@ struct SettingsView: View {
                 #endif
             }
 
+            // Troubleshooting
+            Section {
+                NavigationLink {
+                    ShareDiagnosticView()
+                } label: {
+                    Label("Share Diagnostics", systemImage: "stethoscope")
+                }
+            } header: {
+                Text("Troubleshooting")
+            } footer: {
+                Text("Having trouble with trip sharing? Run diagnostics to see what CloudKit reports.")
+            }
+
             // About
             Section {
                 if let supportURL = URL(string: "https://kevinbuckley.github.io/tripwit/support.html") {

@@ -58,6 +58,14 @@ struct ActiveTripDashboard: View {
     // MARK: - Body
 
     var body: some View {
+        if trip.isDeleted || trip.managedObjectContext == nil {
+            EmptyView()
+        } else {
+            dashboardContent
+        }
+    }
+
+    private var dashboardContent: some View {
         VStack(spacing: 0) {
             headerBar
             if isExpanded {

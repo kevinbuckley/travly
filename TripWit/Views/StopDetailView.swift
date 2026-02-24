@@ -41,6 +41,31 @@ struct StopDetailView: View {
     }
 
     var body: some View {
+        if stop.isDeleted || stop.managedObjectContext == nil {
+            deletedItemView
+        } else {
+            stopContent
+        }
+    }
+
+    private var deletedItemView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "trash.circle")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            Text("Stop No Longer Available")
+                .font(.title3)
+                .fontWeight(.semibold)
+            Text("This stop was removed or the trip was unshared.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
+        .navigationTitle("Removed")
+    }
+
+    private var stopContent: some View {
         List {
             // Map section or Locate button
             if hasLocation {

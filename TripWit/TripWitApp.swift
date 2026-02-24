@@ -53,8 +53,7 @@ struct TripWitApp: App {
     /// Extracts the real share.icloud.com URL, fetches metadata, and accepts the share.
     private func handleShareURL(_ url: URL) {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let urlParam = components.queryItems?.first(where: { $0.name == "url" })?.value,
-              let shareURL = URL(string: urlParam)
+              let rawParam = components.queryItems?.first(where: { $0.name == "url" })?.value
         else {
             appLog.error("[SHARE-ACCEPT] Could not extract share URL from: \(url.absoluteString)")
             shareAcceptAlert = ShareAcceptAlert(
@@ -64,59 +63,223 @@ struct TripWitApp: App {
             return
         }
 
-        appLog.info("[SHARE-ACCEPT] Accepting share from URL: \(shareURL.absoluteString)")
+        // iMessage can wrap URLs in markdown-style formatting (e.g. __url__ for bold).
+        // Strip leading/trailing underscores and whitespace before parsing.
+        let cleaned = rawParam.trimmingCharacters(in: CharacterSet(charactersIn: "_").union(.whitespaces))
+
+        guard let shareURL = URL(string: cleaned) else {
+            appLog.error("[SHARE-ACCEPT] Could not parse cleaned share URL: \(cleaned) (raw: \(rawParam))")
+            shareAcceptAlert = ShareAcceptAlert(
+                title: "Invalid Share Link",
+                message: "This share link appears to be malformed. Please ask the sender to share again."
+            )
+            return
+        }
+
+        appLog.info("[SHARE-ACCEPT] Extracted share URL: \(shareURL.absoluteString)")
 
         // Show a loading indicator (we'll use an alert for simplicity)
         shareAcceptAlert = ShareAcceptAlert(
             title: "Joining Trip...",
-            message: "Connecting to the shared trip. This may take a moment."
+            message: "Connecting to the shared trip. This may take a moment — hang tight!"
         )
 
         Task {
+            // Collect diagnostic info as we go — will show in final alert
+            var diag: [String] = []
+
+            func log(_ msg: String) {
+                appLog.info("[SHARE-ACCEPT] \(msg)")
+                diag.append(msg)
+            }
+
             do {
                 // Step 1: Fetch the share metadata from the URL
                 let metadata = try await fetchShareMetadata(from: shareURL)
-                appLog.info("[SHARE-ACCEPT] Fetched metadata for share: \(metadata.share.recordID)")
+                log("1. Metadata fetched")
+                log("   Share ID: \(metadata.share.recordID.recordName)")
+                log("   Zone: \(metadata.share.recordID.zoneID.zoneName)")
+                log("   Owner: \(metadata.share.recordID.zoneID.ownerName)")
+                log("   Root record: \(metadata.rootRecordID.recordName)")
+                log("   Participant status: \(Self.participantStatusString(metadata.participantStatus))")
+                log("   Participant permission: \(Self.participantPermissionString(metadata.participantPermission))")
+                log("   Participant role: \(Self.participantRoleString(metadata.participantRole))")
 
                 // Step 2: Accept the share into the shared persistent store
                 guard let sharedStore = persistence.sharedPersistentStore else {
-                    appLog.error("[SHARE-ACCEPT] No shared store available")
+                    log("ERROR: No shared store available!")
                     await MainActor.run {
-                        shareAcceptAlert = ShareAcceptAlert(
-                            title: "Error",
-                            message: "Could not join the trip. Please try again."
-                        )
+                        shareAcceptAlert = ShareAcceptAlert(title: "Error", message: diag.joined(separator: "\n"))
                     }
                     return
                 }
+                log("2. Shared store: \(sharedStore.url?.lastPathComponent ?? "?")")
+
+                // Clear sync events so we only see events from THIS acceptance
+                await MainActor.run { persistence.syncEvents.removeAll() }
 
                 try await persistence.container.acceptShareInvitations(
                     from: [metadata],
                     into: sharedStore
                 )
+                log("3. acceptShareInvitations succeeded")
 
-                appLog.info("[SHARE-ACCEPT] Successfully accepted share!")
+                // Check participant status after accept
+                log("   Post-accept status: \(Self.participantStatusString(metadata.participantStatus))")
 
-                // Give CloudKit a moment to sync the shared records into the local store
-                try? await Task.sleep(for: .seconds(2))
+                // Query store counts BEFORE any sync attempt
+                let privateCount = persistence.privateStoreTripCount()
+                let sharedCount = persistence.sharedStoreTripCount()
+                let viewContextCount = await MainActor.run { () -> Int in
+                    let req = TripEntity.fetchRequest() as! NSFetchRequest<TripEntity>
+                    return (try? persistence.viewContext.count(for: req)) ?? 0
+                }
+                log("4. Store counts before sync:")
+                log("   Private store: \(privateCount) trips")
+                log("   Shared store: \(sharedCount) trips")
+                log("   viewContext: \(viewContextCount) trips")
 
-                // Force the viewContext to pick up data from the shared store
+                // Step 3a: Fetch records from the shared zone directly via CloudKit API
+                let zoneID = metadata.share.recordID.zoneID
+                let ckContainer = CKContainer(identifier: "iCloud.com.kevinbuckley.travelplanner")
+                let sharedDB = ckContainer.sharedCloudDatabase
+
+                var ckRecordCount = 0
+                var ckRecordTypes: [String: Int] = [:]
+                do {
+                    let zoneChanges = try await sharedDB.recordZoneChanges(inZoneWith: zoneID, since: nil)
+                    ckRecordCount = zoneChanges.modificationResultsByID.count
+                    for (_, result) in zoneChanges.modificationResultsByID {
+                        if case .success(let mod) = result {
+                            ckRecordTypes[mod.record.recordType, default: 0] += 1
+                        }
+                    }
+                    log("5. CloudKit zone fetch: \(ckRecordCount) records")
+                    for (type, count) in ckRecordTypes.sorted(by: { $0.key < $1.key }) {
+                        log("   \(type): \(count)")
+                    }
+                } catch {
+                    log("5. CloudKit zone fetch FAILED: \(error.localizedDescription)")
+                }
+
+                // Step 3b: Check shares in shared store
+                do {
+                    let shares = try persistence.container.fetchShares(in: sharedStore)
+                    log("6. Shares in shared store: \(shares.count)")
+                    for share in shares {
+                        log("   \(share.recordID.recordName) zone=\(share.recordID.zoneID.zoneName)")
+                    }
+                } catch {
+                    log("6. fetchShares failed: \(error.localizedDescription)")
+                }
+
+                // Step 3c: Reload shared store
+                await persistence.refreshCloudKitSync()
+                log("7. Shared store reloaded")
+
+                // Wait and check sync events + store counts
+                try? await Task.sleep(for: .seconds(5))
+
+                let sharedCountAfter = persistence.sharedStoreTripCount()
+                let viewContextAfter = await MainActor.run { () -> Int in
+                    persistence.viewContext.refreshAllObjects()
+                    let req = TripEntity.fetchRequest() as! NSFetchRequest<TripEntity>
+                    return (try? persistence.viewContext.count(for: req)) ?? 0
+                }
+                log("8. After 5s wait:")
+                log("   Shared store: \(sharedCountAfter) trips")
+                log("   viewContext: \(viewContextAfter) trips")
+
+                // Capture sync events
+                let events = await MainActor.run { persistence.syncEvents }
+                if events.isEmpty {
+                    log("9. Sync events: NONE (NSPersistentCloudKitContainer never fired)")
+                } else {
+                    log("9. Sync events: \(events.count)")
+                    for event in events {
+                        let status = event.succeeded ? "OK" : "FAIL"
+                        let errStr = event.error.map { " — \($0)" } ?? ""
+                        log("   [\(status)] \(event.type) \(event.storeName)\(errStr)")
+                    }
+                }
+
+                // Poll a bit more
+                var tripArrived = sharedCountAfter > 0 || viewContextAfter > viewContextCount
+                if !tripArrived {
+                    for pollAttempt in 1...10 {
+                        try? await Task.sleep(for: .seconds(2))
+                        let current = persistence.sharedStoreTripCount()
+                        if current > 0 {
+                            tripArrived = true
+                            log("10. Trip appeared after poll \(pollAttempt)! (\(current) in shared store)")
+                            break
+                        }
+                    }
+                    if !tripArrived {
+                        log("10. Trip did NOT appear after 20s additional polling")
+                    }
+                } else {
+                    log("10. Trip already present!")
+                }
+
+                // Final summary
                 await MainActor.run {
                     persistence.viewContext.refreshAllObjects()
-                    shareAcceptAlert = ShareAcceptAlert(
-                        title: "Trip Joined!",
-                        message: "You've successfully joined the shared trip. It will appear in your trips list shortly."
-                    )
+                    let diagText = diag.joined(separator: "\n")
+                    if tripArrived {
+                        shareAcceptAlert = ShareAcceptAlert(
+                            title: "Trip Joined! 🎉",
+                            message: "The shared trip is now in your trips list.\n\n--- Debug ---\n\(diagText)"
+                        )
+                    } else {
+                        shareAcceptAlert = ShareAcceptAlert(
+                            title: "Trip Not Syncing",
+                            message: "The share was accepted but the trip hasn't appeared. Go to Settings → Share Diagnostics for more info.\n\n--- Debug ---\n\(diagText)"
+                        )
+                    }
                 }
             } catch {
-                appLog.error("[SHARE-ACCEPT] Error accepting share: \(error.localizedDescription)")
+                log("ERROR: \(error.localizedDescription)")
+                let diagText = diag.joined(separator: "\n")
                 await MainActor.run {
                     shareAcceptAlert = ShareAcceptAlert(
                         title: "Could Not Join Trip",
-                        message: "There was an error joining the trip: \(error.localizedDescription)"
+                        message: "\(error.localizedDescription)\n\n--- Debug ---\n\(diagText)"
                     )
                 }
             }
+        }
+    }
+
+    // MARK: - CloudKit Enum Helpers
+
+    private static func participantStatusString(_ status: CKShare.ParticipantAcceptanceStatus) -> String {
+        switch status {
+        case .unknown: return "unknown"
+        case .pending: return "pending"
+        case .accepted: return "accepted"
+        case .removed: return "removed"
+        @unknown default: return "rawValue(\(status.rawValue))"
+        }
+    }
+
+    private static func participantPermissionString(_ perm: CKShare.ParticipantPermission) -> String {
+        switch perm {
+        case .unknown: return "unknown"
+        case .none: return "none"
+        case .readOnly: return "readOnly"
+        case .readWrite: return "readWrite"
+        @unknown default: return "rawValue(\(perm.rawValue))"
+        }
+    }
+
+    private static func participantRoleString(_ role: CKShare.ParticipantRole) -> String {
+        switch role {
+        case .unknown: return "unknown"
+        case .owner: return "owner"
+        case .privateUser: return "privateUser"
+        case .publicUser: return "publicUser"
+        @unknown default: return "rawValue(\(role.rawValue))"
         }
     }
 
@@ -127,6 +290,7 @@ struct TripWitApp: App {
             operation.shouldFetchRootRecord = true
 
             var foundMetadata: CKShare.Metadata?
+            var perShareError: Error?
 
             operation.perShareMetadataResultBlock = { shareURL, result in
                 switch result {
@@ -134,7 +298,8 @@ struct TripWitApp: App {
                     appLog.info("[SHARE-ACCEPT] Got metadata for \(shareURL)")
                     foundMetadata = metadata
                 case .failure(let error):
-                    appLog.error("[SHARE-ACCEPT] perShareMetadata error: \(error.localizedDescription)")
+                    appLog.error("[SHARE-ACCEPT] perShareMetadata error for \(shareURL): \(error.localizedDescription)")
+                    perShareError = error
                 }
             }
 
@@ -143,10 +308,12 @@ struct TripWitApp: App {
                 case .success:
                     if let metadata = foundMetadata {
                         continuation.resume(returning: metadata)
+                    } else if let error = perShareError {
+                        continuation.resume(throwing: error)
                     } else {
                         continuation.resume(throwing: NSError(
                             domain: "TripWit", code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: "No metadata returned for share URL"]
+                            userInfo: [NSLocalizedDescriptionKey: "No metadata returned for share URL. The share may have been revoked or the link may be invalid."]
                         ))
                     }
                 case .failure(let error):

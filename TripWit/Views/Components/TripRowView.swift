@@ -17,6 +17,16 @@ struct TripRowView: View {
     }
 
     var body: some View {
+        if trip.isDeleted || trip.managedObjectContext == nil {
+            Text("Trip removed")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        } else {
+            rowContent
+        }
+    }
+
+    private var rowContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(trip.wrappedName)

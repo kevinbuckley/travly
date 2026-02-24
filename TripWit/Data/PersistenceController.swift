@@ -4,12 +4,25 @@ import os
 
 private let pcLog = Logger(subsystem: "com.kevinbuckley.travelplanner", category: "Persistence")
 
+/// Captured CloudKit sync event for diagnostics.
+struct CKSyncEvent: Identifiable {
+    let id = UUID()
+    let date: Date
+    let type: String      // setup, import, export
+    let succeeded: Bool
+    let storeName: String  // Private.sqlite or Shared.sqlite
+    let error: String?
+}
+
 final class PersistenceController: ObservableObject {
 
     static let shared = PersistenceController()
 
     let container: NSPersistentCloudKitContainer
     let cloudContainer: CKContainer
+
+    /// All CloudKit sync events captured since app launch — visible to diagnostic views.
+    @Published var syncEvents: [CKSyncEvent] = []
 
     private static let containerIdentifier = "iCloud.com.kevinbuckley.travelplanner"
     private static let appTransactionAuthorName = "TripWit"
@@ -121,6 +134,57 @@ final class PersistenceController: ObservableObject {
             name: .NSPersistentStoreRemoteChange,
             object: container.persistentStoreCoordinator
         )
+
+        // Listen for CloudKit sync events (setup, import, export) — critical for debugging
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCloudKitEvent),
+            name: NSPersistentCloudKitContainer.eventChangedNotification,
+            object: container
+        )
+    }
+
+    /// Capture every NSPersistentCloudKitContainer sync event for diagnostics.
+    @objc private func handleCloudKitEvent(_ notification: Notification) {
+        guard let event = notification.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey]
+                as? NSPersistentCloudKitContainer.Event else { return }
+
+        // Only log when the event finishes (endDate != nil)
+        guard event.endDate != nil else { return }
+
+        let typeStr: String
+        switch event.type {
+        case .setup: typeStr = "setup"
+        case .import: typeStr = "import"
+        case .export: typeStr = "export"
+        @unknown default: typeStr = "unknown"
+        }
+
+        let storeID = event.storeIdentifier
+        let storeName = container.persistentStoreCoordinator.persistentStores
+            .first { $0.identifier == storeID }?.url?.lastPathComponent ?? storeID
+
+        let syncEvent = CKSyncEvent(
+            date: event.endDate ?? Date(),
+            type: typeStr,
+            succeeded: event.succeeded,
+            storeName: storeName,
+            error: event.error?.localizedDescription
+        )
+
+        DispatchQueue.main.async {
+            self.syncEvents.append(syncEvent)
+            // Keep last 100 events
+            if self.syncEvents.count > 100 {
+                self.syncEvents.removeFirst(self.syncEvents.count - 100)
+            }
+        }
+
+        if event.succeeded {
+            pcLog.info("[CK-EVENT] \(typeStr) \(storeName): succeeded")
+        } else {
+            pcLog.error("[CK-EVENT] \(typeStr) \(storeName): FAILED — \(event.error?.localizedDescription ?? "unknown error")")
+        }
     }
 
     /// Remove any leftover SwiftData .store files from before the Core Data migration.
@@ -252,6 +316,70 @@ final class PersistenceController: ObservableObject {
         guard let sharedStoreURL else { return nil }
         return container.persistentStoreCoordinator.persistentStores.first {
             $0.url == sharedStoreURL
+        }
+    }
+
+    /// Query the shared store directly for trip count — bypasses viewContext caching.
+    func sharedStoreTripCount() -> Int {
+        guard let sharedStore = sharedPersistentStore else { return -1 }
+        let context = container.newBackgroundContext()
+        var count = 0
+        context.performAndWait {
+            let request = TripEntity.fetchRequest() as! NSFetchRequest<TripEntity>
+            request.affectedStores = [sharedStore]
+            count = (try? context.count(for: request)) ?? 0
+        }
+        return count
+    }
+
+    /// Query the private store directly for trip count.
+    func privateStoreTripCount() -> Int {
+        guard let privateStore = privatePersistentStore else { return -1 }
+        let context = container.newBackgroundContext()
+        var count = 0
+        context.performAndWait {
+            let request = TripEntity.fetchRequest() as! NSFetchRequest<TripEntity>
+            request.affectedStores = [privateStore]
+            count = (try? context.count(for: request)) ?? 0
+        }
+        return count
+    }
+
+    /// Force NSPersistentCloudKitContainer to re-fetch from CloudKit.
+    /// This destroys and reloads the shared store, which triggers a full import
+    /// of any records the user now has access to (e.g. after accepting a share).
+    func refreshCloudKitSync() async {
+        pcLog.info("[CK-SYNC] Requesting CloudKit sync refresh")
+
+        // Reload the shared store to force a fresh import from CloudKit.
+        // This is more reliable than waiting for automatic sync after share acceptance.
+        guard let sharedStore = sharedPersistentStore,
+              let sharedURL = sharedStore.url else {
+            pcLog.warning("[CK-SYNC] No shared store found to refresh")
+            return
+        }
+
+        let coordinator = container.persistentStoreCoordinator
+
+        // Find the matching description so we preserve CloudKit options
+        guard let description = container.persistentStoreDescriptions.first(where: {
+            $0.url == sharedURL
+        }) else {
+            pcLog.warning("[CK-SYNC] No matching store description for shared store")
+            return
+        }
+
+        do {
+            // Remove and re-add the store — this forces a fresh CloudKit import
+            try coordinator.remove(sharedStore)
+            _ = try coordinator.addPersistentStore(
+                type: .sqlite,
+                at: sharedURL,
+                options: description.options
+            )
+            pcLog.info("[CK-SYNC] Shared store reloaded — CloudKit will re-import")
+        } catch {
+            pcLog.error("[CK-SYNC] Failed to reload shared store: \(error.localizedDescription)")
         }
     }
 }

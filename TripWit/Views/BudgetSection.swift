@@ -34,6 +34,9 @@ struct BudgetSection: View {
     }
 
     var body: some View {
+        if trip.isDeleted || trip.managedObjectContext == nil {
+            EmptyView()
+        }
         Section {
             // Summary
             if hasBudget || !trip.expensesArray.isEmpty {

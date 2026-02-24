@@ -21,6 +21,27 @@ struct BookingDetailView: View {
     }
 
     var body: some View {
+        if booking.isDeleted || booking.managedObjectContext == nil {
+            VStack(spacing: 16) {
+                Image(systemName: "trash.circle")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.secondary)
+                Text("Booking No Longer Available")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                Text("This booking was removed or the trip was unshared.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding()
+            .navigationTitle("Removed")
+        } else {
+            bookingContent
+        }
+    }
+
+    private var bookingContent: some View {
         List {
             // Header
             Section {

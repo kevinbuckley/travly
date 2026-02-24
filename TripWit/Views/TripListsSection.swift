@@ -30,6 +30,9 @@ struct TripListsSection: View {
     }
 
     var body: some View {
+        if trip.isDeleted || trip.managedObjectContext == nil {
+            EmptyView()
+        }
         ForEach(sortedLists) { list in
             listSection(list)
         }

@@ -1,6 +1,10 @@
 import SwiftUI
 import CoreData
+import CloudKit
 import TripCore
+import os.log
+
+private let listLog = Logger(subsystem: "com.kevinbuckley.travelplanner", category: "TripList")
 
 struct TripListView: View {
 
@@ -9,17 +13,24 @@ struct TripListView: View {
 
     @State private var showingAddTrip = false
     @State private var tripToDelete: TripEntity?
+    @State private var isRefreshing = false
 
     private let sharingService = CloudKitSharingService()
+    private let persistence = PersistenceController.shared
+
+    /// All valid (non-deleted) trips.
+    private var validTrips: [TripEntity] {
+        allTrips.filter { !$0.isDeleted && $0.managedObjectContext != nil }
+    }
 
     /// Own trips (not shared with me by others).
     private var ownTrips: [TripEntity] {
-        allTrips.filter { !sharingService.isParticipant($0) }
+        validTrips.filter { !sharingService.isParticipant($0) }
     }
 
     /// Trips shared with me by others.
     private var sharedWithMeTrips: [TripEntity] {
-        allTrips.filter { sharingService.isParticipant($0) }
+        validTrips.filter { sharingService.isParticipant($0) }
     }
 
     private var activeTrips: [TripEntity] {
@@ -64,14 +75,14 @@ struct TripListView: View {
             set: { if !$0 { tripToDelete = nil } }
         )) {
             Button("Delete", role: .destructive) {
-                if let trip = tripToDelete {
+                if let trip = tripToDelete, !trip.isDeleted {
                     DataManager(context: viewContext).deleteTrip(trip)
-                    tripToDelete = nil
                 }
+                tripToDelete = nil
             }
             Button("Cancel", role: .cancel) { tripToDelete = nil }
         } message: {
-            if let trip = tripToDelete {
+            if let trip = tripToDelete, !trip.isDeleted {
                 Text("Delete \"\(trip.wrappedName)\" and all its stops, bookings, and comments? This cannot be undone.")
             }
         }
@@ -190,27 +201,68 @@ struct TripListView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .refreshable {
+            await refreshTrips()
+        }
+    }
+
+    /// Force CloudKit to re-import shared records and refresh the view context.
+    private func refreshTrips() async {
+        isRefreshing = true
+        listLog.info("[REFRESH] Pull-to-refresh triggered")
+
+        // Step 1: Fetch all shared zones from CloudKit to wake up the sync engine.
+        let ckContainer = CKContainer(identifier: "iCloud.com.kevinbuckley.travelplanner")
+        let sharedDB = ckContainer.sharedCloudDatabase
+        do {
+            let zones = try await sharedDB.allRecordZones()
+            listLog.info("[REFRESH] Found \(zones.count) shared zone(s)")
+            // Touch each zone to trigger NSPersistentCloudKitContainer to notice them
+            for zone in zones {
+                listLog.info("[REFRESH]   Zone: \(zone.zoneID.zoneName) owner: \(zone.zoneID.ownerName)")
+                let changes = try await sharedDB.recordZoneChanges(inZoneWith: zone.zoneID, since: nil)
+                listLog.info("[REFRESH]   Zone has \(changes.modificationResultsByID.count) records")
+            }
+        } catch {
+            listLog.error("[REFRESH] Failed to fetch shared zones: \(error.localizedDescription)")
+        }
+
+        // Step 2: Reload the shared store to force Core Data to re-import.
+        await persistence.refreshCloudKitSync()
+
+        // Step 3: Wait for import, then refresh the view context.
+        try? await Task.sleep(for: .seconds(3))
+        await MainActor.run {
+            persistence.viewContext.refreshAllObjects()
+        }
+        listLog.info("[REFRESH] Refresh complete")
+        isRefreshing = false
     }
 
     // MARK: - Row
 
     @ViewBuilder
     private func tripRow(_ trip: TripEntity, showOwner: Bool = false) -> some View {
-        HStack {
-            TripRowView(trip: trip)
-            if sharingService.isShared(trip) && !showOwner {
-                Spacer()
-                Image(systemName: "person.2.fill")
-                    .font(.caption)
-                    .foregroundStyle(.blue.opacity(0.7))
+        if trip.isDeleted || trip.managedObjectContext == nil {
+            Text("Trip removed")
+                .foregroundStyle(.secondary)
+        } else {
+            HStack {
+                TripRowView(trip: trip)
+                if sharingService.isShared(trip) && !showOwner {
+                    Spacer()
+                    Image(systemName: "person.2.fill")
+                        .font(.caption)
+                        .foregroundStyle(.blue.opacity(0.7))
+                }
             }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if showOwner, let ownerName = sharingService.ownerName(for: trip) {
-                Text("by \(ownerName)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .padding(.trailing, 4)
+            .overlay(alignment: .bottomTrailing) {
+                if showOwner, let ownerName = sharingService.ownerName(for: trip) {
+                    Text("by \(ownerName)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, 4)
+                }
             }
         }
     }

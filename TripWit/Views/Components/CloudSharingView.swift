@@ -14,11 +14,13 @@ private let shareLog = Logger(subsystem: "com.kevinbuckley.travelplanner", categ
 /// that uses MFMessageComposeViewController for Messages (bypassing UICloudSharingController
 /// which has a documented iOS spinner bug when used with Messages).
 ///
-/// For EXISTING shares: Uses UICloudSharingController for managing
-/// participants, permissions, and stopping sharing.
+/// For EXISTING shares: Shows a custom action sheet for inviting new people
+/// (using the same wrapped tripwit:// URL to avoid the iMessage spinner),
+/// plus a "Manage Sharing" option that opens UICloudSharingController
+/// only for permissions and stop-sharing (not for adding people).
 enum CloudSharingPresenter {
 
-    static func present(
+    @MainActor static func present(
         trip: TripEntity,
         persistence: PersistenceController,
         sharingService: CloudKitSharingService
@@ -37,10 +39,10 @@ enum CloudSharingPresenter {
         }
 
         if let existingShare = sharingService.existingShare(for: trip) {
-            shareLog.info("[SHARE] Presenting UICloudSharingController for EXISTING share")
-            presentSharingController(
+            shareLog.info("[SHARE] Presenting custom sheet for EXISTING share (avoids iMessage spinner)")
+            presentExistingShareSheet(
+                trip: trip,
                 share: existingShare,
-                container: persistence.cloudContainer,
                 persistence: persistence,
                 from: topVC
             )
@@ -61,7 +63,7 @@ enum CloudSharingPresenter {
     ///   • Message  — opens MFMessageComposeViewController directly (no spinner)
     ///   • Copy Link — copies wrapped URL to clipboard
     ///   • More...  — UIActivityViewController for AirDrop, Mail, etc.
-    private static func createAndPresentCustomSheet(
+    @MainActor private static func createAndPresentCustomSheet(
         trip: TripEntity,
         persistence: PersistenceController,
         from presenter: UIViewController
@@ -110,21 +112,37 @@ enum CloudSharingPresenter {
                         try await persistence.container.persistUpdatedShare(share, in: store)
                     }
 
-                    guard let shareURL = share.url else {
-                        loadingAlert.dismiss(animated: true) {
-                            showError(NSError(domain: "TripWit", code: -2,
-                                userInfo: [NSLocalizedDescriptionKey: "Share created but has no link. Please try again."]),
-                                from: presenter)
+                    // The share URL may not be available immediately — wait briefly for
+                    // CloudKit to assign it, then check again from the persistent store.
+                    var shareURL = share.url
+                    if shareURL == nil {
+                        shareLog.info("[SHARE] Share URL nil after create, waiting for server...")
+                        try? await Task.sleep(for: .seconds(2))
+                        // Re-fetch the share from the store in case the URL arrived
+                        if let store = persistence.privatePersistentStore {
+                            let shares = try? persistence.container.fetchShares(in: store)
+                            shareURL = shares?.last?.url
                         }
-                        return
                     }
 
-                    shareLog.info("[SHARE] Share URL: \(shareURL.absoluteString)")
+                    guard let finalURL = shareURL else {
+                        shareLog.error("[SHARE] Share still has no URL after waiting")
+                        // Treat as retryable — don't return, let the retry loop continue
+                        lastError = NSError(domain: "TripWit", code: -2,
+                            userInfo: [NSLocalizedDescriptionKey: "Share created but has no link. Please try again in a moment."])
+                        continue
+                    }
+
+                    shareLog.info("[SHARE] Share URL: \(finalURL.absoluteString)")
 
                     // Wrap in tripwit:// scheme — prevents Messages from detecting
-                    // it as a CloudKit collaboration URL (which causes the spinner)
-                    let encoded = shareURL.absoluteString
-                        .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? shareURL.absoluteString
+                    // it as a CloudKit collaboration URL (which causes the spinner).
+                    // Use strict encoding: urlQueryAllowed minus '#' and '&' which would
+                    // break the wrapper URL (# starts a fragment, & starts next param).
+                    var allowedChars = CharacterSet.urlQueryAllowed
+                    allowedChars.remove(charactersIn: "#&")
+                    let encoded = finalURL.absoluteString
+                        .addingPercentEncoding(withAllowedCharacters: allowedChars) ?? finalURL.absoluteString
                     let wrappedURLString = "tripwit://share?url=\(encoded)"
                     let shareText = "Join my trip \"\(tripName)\" on TripWit!\n\(wrappedURLString)"
 
@@ -221,9 +239,104 @@ enum CloudSharingPresenter {
         presenter.present(sheet, animated: true)
     }
 
-    // MARK: - Existing Share: UICloudSharingController for management
+    // MARK: - Existing Share: Custom sheet to invite + manage
 
-    static func presentSharingController(
+    /// For trips that are already shared, show our own action sheet for inviting
+    /// new people (using the wrapped tripwit:// URL to avoid the iMessage spinner),
+    /// plus a "Manage Sharing" option for permissions/stop sharing via UICloudSharingController.
+    @MainActor
+    private static func presentExistingShareSheet(
+        trip: TripEntity,
+        share: CKShare,
+        persistence: PersistenceController,
+        from presenter: UIViewController
+    ) {
+        let tripName = trip.wrappedName
+        let participantCount = share.participants.count
+
+        guard let shareURL = share.url else {
+            shareLog.error("[SHARE] Existing share has no URL")
+            showError(NSError(domain: "TripWit", code: -3,
+                userInfo: [NSLocalizedDescriptionKey: "Share link not available. Try again later."]),
+                from: presenter)
+            return
+        }
+
+        var allowedChars = CharacterSet.urlQueryAllowed
+        allowedChars.remove(charactersIn: "#&")
+        let encoded = shareURL.absoluteString
+            .addingPercentEncoding(withAllowedCharacters: allowedChars) ?? shareURL.absoluteString
+        let wrappedURLString = "tripwit://share?url=\(encoded)"
+        let shareText = "Join my trip \"\(tripName)\" on TripWit!\n\(wrappedURLString)"
+
+        let sheet = UIAlertController(
+            title: "Sharing \"\(tripName)\"",
+            message: "\(participantCount) participant\(participantCount == 1 ? "" : "s") · Tap Invite to add more people.",
+            preferredStyle: .actionSheet
+        )
+
+        // Invite via Message
+        if MFMessageComposeViewController.canSendText() {
+            sheet.addAction(UIAlertAction(title: "Invite via Message", style: .default) { _ in
+                let composer = MFMessageComposeViewController()
+                composer.body = shareText
+                let delegate = MessageDelegate()
+                composer.messageComposeDelegate = delegate
+                objc_setAssociatedObject(composer, &MessageDelegate.key, delegate, .OBJC_ASSOCIATION_RETAIN)
+                presenter.present(composer, animated: true)
+            })
+        }
+
+        // Copy Link
+        sheet.addAction(UIAlertAction(title: "Copy Link", style: .default) { _ in
+            UIPasteboard.general.string = wrappedURLString
+            let toast = UIAlertController(title: nil, message: "Link copied!", preferredStyle: .alert)
+            presenter.present(toast, animated: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                toast.dismiss(animated: true)
+            }
+        })
+
+        // More invite options (AirDrop, Mail, etc.)
+        sheet.addAction(UIAlertAction(title: "Invite via Other...", style: .default) { _ in
+            let activityVC = UIActivityViewController(
+                activityItems: [shareText as NSString],
+                applicationActivities: nil
+            )
+            activityVC.excludedActivityTypes = [.message]
+            activityVC.modalPresentationStyle = .formSheet
+            if let popover = activityVC.popoverPresentationController {
+                popover.sourceView = presenter.view
+                popover.sourceRect = CGRect(x: presenter.view.bounds.midX,
+                                           y: presenter.view.bounds.midY, width: 0, height: 0)
+            }
+            presenter.present(activityVC, animated: true)
+        })
+
+        // Manage Sharing — UICloudSharingController for permissions and stop sharing
+        sheet.addAction(UIAlertAction(title: "Manage Sharing...", style: .default) { _ in
+            presentSharingController(
+                share: share,
+                container: persistence.cloudContainer,
+                persistence: persistence,
+                from: presenter
+            )
+        })
+
+        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = sheet.popoverPresentationController {
+            popover.sourceView = presenter.view
+            popover.sourceRect = CGRect(x: presenter.view.bounds.midX,
+                                       y: presenter.view.bounds.midY, width: 0, height: 0)
+        }
+
+        presenter.present(sheet, animated: true)
+    }
+
+    // MARK: - UICloudSharingController (permissions & stop sharing only)
+
+    @MainActor static func presentSharingController(
         share: CKShare,
         container: CKContainer,
         persistence: PersistenceController,
@@ -248,10 +361,10 @@ enum CloudSharingPresenter {
 
 // MARK: - Message Delegate
 
-private class MessageDelegate: NSObject, MFMessageComposeViewControllerDelegate {
-    static var key: UInt8 = 0
+private class MessageDelegate: NSObject, @preconcurrency MFMessageComposeViewControllerDelegate {
+    nonisolated(unsafe) static var key: UInt8 = 0
 
-    func messageComposeViewController(
+    @MainActor func messageComposeViewController(
         _ controller: MFMessageComposeViewController,
         didFinishWith result: MessageComposeResult
     ) {
@@ -287,7 +400,13 @@ private class SharingDelegate: NSObject, UICloudSharingControllerDelegate {
             persistence.container.purgeObjectsAndRecordsInZone(
                 with: share.recordID.zoneID, in: store
             ) { _, error in
-                if let error { shareLog.error("[SHARE] purge error: \(error.localizedDescription)") }
+                if let error {
+                    shareLog.error("[SHARE] purge error: \(error.localizedDescription)")
+                }
+                // Refresh the viewContext so views stop referencing deleted objects
+                DispatchQueue.main.async {
+                    self.persistence.viewContext.refreshAllObjects()
+                }
             }
         }
     }

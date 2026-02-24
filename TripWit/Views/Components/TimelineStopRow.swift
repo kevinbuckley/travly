@@ -59,6 +59,9 @@ struct TimelineStopRow: View {
     }
 
     var body: some View {
+        if stop.isDeleted || stop.managedObjectContext == nil {
+            EmptyView()
+        }
         HStack(alignment: .top, spacing: 12) {
             timelineColumn
             stopInfoColumn

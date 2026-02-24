@@ -21,14 +21,20 @@ struct StopRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
-            stopIcon
-            stopLabels
-            Spacer()
-            visitedIndicator
+        if stop.isDeleted || stop.managedObjectContext == nil {
+            Text("Stop removed")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        } else {
+            HStack(spacing: 10) {
+                stopIcon
+                stopLabels
+                Spacer()
+                visitedIndicator
+            }
+            .padding(.vertical, 2)
+            .opacity(stop.isVisited ? 0.6 : 1.0)
         }
-        .padding(.vertical, 2)
-        .opacity(stop.isVisited ? 0.6 : 1.0)
     }
 
     private var stopIcon: some View {

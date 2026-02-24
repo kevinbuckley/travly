@@ -17,30 +17,35 @@ struct TripMapView: View {
     @State private var nearbyPOIs: [MKMapItem] = []
 
     /// The trip to display: active trip first, then the nearest upcoming, then most recent.
+    private var validTrips: [TripEntity] {
+        allTrips.filter { !$0.isDeleted && $0.managedObjectContext != nil }
+    }
+
     private var displayTrip: TripEntity? {
         // Active trip takes priority
-        if let active = allTrips.first(where: { $0.status == .active }) {
+        if let active = validTrips.first(where: { $0.status == .active }) {
             return active
         }
         // Next upcoming trip (earliest future start date)
-        let upcoming = allTrips
+        let upcoming = validTrips
             .filter { $0.status == .planning && $0.wrappedStartDate > Date() }
             .sorted { $0.wrappedStartDate < $1.wrappedStartDate }
         if let next = upcoming.first {
             return next
         }
         // Fall back to most recent trip
-        return allTrips.first
+        return validTrips.first
     }
 
     private var allStops: [StopEntity] {
-        guard let trip = displayTrip else { return [] }
-        return trip.daysArray.flatMap { $0.stopsArray }.filter { $0.latitude != 0 || $0.longitude != 0 }
+        guard let trip = displayTrip, !trip.isDeleted else { return [] }
+        return trip.daysArray.flatMap { $0.stopsArray }
+            .filter { !$0.isDeleted && ($0.latitude != 0 || $0.longitude != 0) }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            if allTrips.isEmpty {
+            if validTrips.isEmpty {
                 emptyMapState
             } else {
                 mainContent
@@ -49,12 +54,12 @@ struct TripMapView: View {
         .navigationTitle("Map")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $navigateToTripID) { tripID in
-            if let trip = allTrips.first(where: { $0.id == tripID }) {
+            if let trip = validTrips.first(where: { $0.id == tripID && !$0.isDeleted }) {
                 TripDetailView(trip: trip)
             }
         }
         .navigationDestination(item: $navigateToStopID) { stopID in
-            if let stop = allStops.first(where: { $0.id == stopID }) {
+            if let stop = allStops.first(where: { $0.id == stopID && !$0.isDeleted }) {
                 StopDetailView(stop: stop)
             }
         }

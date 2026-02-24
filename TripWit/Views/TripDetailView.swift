@@ -62,8 +62,30 @@ struct TripDetailView: View {
     }
 
     var body: some View {
-        tripList
-            .toolbar { tripToolbar }
+        if trip.isDeleted || trip.managedObjectContext == nil {
+            deletedTripView
+        } else {
+            tripList
+                .toolbar { tripToolbar }
+        }
+    }
+
+    /// Shown when the observed trip has been deleted (e.g. owner stopped sharing).
+    private var deletedTripView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "trash.circle")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            Text("Trip No Longer Available")
+                .font(.title3)
+                .fontWeight(.semibold)
+            Text("This trip was removed or the owner stopped sharing it.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
+        .navigationTitle("Trip Removed")
     }
 
     // MARK: - Trip List
