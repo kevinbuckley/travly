@@ -59,14 +59,13 @@ struct ContentView: View {
                 WelcomeView(hasCompletedOnboarding: $hasCompletedOnboarding)
             }
         }
-        .onChange(of: pendingImportURL) { _, url in
-            guard let url else { return }
-            do {
-                pendingImport = try TripShareService.decodeTrip(from: url)
-            } catch {
-                importError = error.localizedDescription
-            }
-            pendingImportURL = nil
+        .onAppear {
+            // Handle .tripwit file URL that arrived during cold launch
+            // (before onChange was registered)
+            handleImportURL()
+        }
+        .onChange(of: pendingImportURL) { _, _ in
+            handleImportURL()
         }
         .sheet(item: $pendingImport) { transfer in
             ImportTripSheet(transfer: transfer) { importedTripID in
@@ -85,6 +84,17 @@ struct ContentView: View {
         } message: {
             Text(importError ?? "Could not read the trip file.")
         }
+    }
+
+    /// Process a pending .tripwit import URL if one is waiting.
+    private func handleImportURL() {
+        guard let url = pendingImportURL else { return }
+        do {
+            pendingImport = try TripShareService.decodeTrip(from: url)
+        } catch {
+            importError = error.localizedDescription
+        }
+        pendingImportURL = nil
     }
 
     private var mainTabView: some View {
