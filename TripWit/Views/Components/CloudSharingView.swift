@@ -541,16 +541,33 @@ private class SharingDelegate: NSObject, UICloudSharingControllerDelegate {
 
     func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
         shareLog.info("[SHARE] didStopSharing")
-        if let share = csc.share, let store = persistence.privatePersistentStore {
-            persistence.container.purgeObjectsAndRecordsInZone(
-                with: share.recordID.zoneID, in: store
-            ) { _, error in
-                if let error {
-                    shareLog.error("[SHARE] purge error: \(error.localizedDescription)")
-                }
-                // Refresh the viewContext so views stop referencing deleted objects
-                DispatchQueue.main.async {
-                    self.persistence.viewContext.refreshAllObjects()
+        guard let share = csc.share else { return }
+
+        let isOwner = share.currentUserParticipant?.role == .owner
+
+        if isOwner {
+            // Owner stopped sharing — keep the trip data, just persist
+            // that the share is removed. The records stay in the private store.
+            shareLog.info("[SHARE] Owner stopped sharing — keeping trip data")
+            if let store = persistence.privatePersistentStore {
+                persistence.container.persistUpdatedShare(share, in: store)
+            }
+            DispatchQueue.main.async {
+                self.persistence.viewContext.refreshAllObjects()
+            }
+        } else {
+            // Participant left — remove the shared data from their device
+            shareLog.info("[SHARE] Participant left share — purging shared zone")
+            if let store = persistence.sharedPersistentStore {
+                persistence.container.purgeObjectsAndRecordsInZone(
+                    with: share.recordID.zoneID, in: store
+                ) { _, error in
+                    if let error {
+                        shareLog.error("[SHARE] purge error: \(error.localizedDescription)")
+                    }
+                    DispatchQueue.main.async {
+                        self.persistence.viewContext.refreshAllObjects()
+                    }
                 }
             }
         }

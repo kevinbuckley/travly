@@ -51,11 +51,26 @@ struct StopTransfer: Codable {
     var phone: String?
     var website: String?
     var comments: [CommentTransfer]
+    // Added in schema v1 — defaults ensure old files without these fields still decode
+    var links: [StopLinkTransfer] = []
+    var todos: [StopTodoTransfer] = []
 }
 
 struct CommentTransfer: Codable {
     var text: String
     var createdAt: Date
+}
+
+struct StopLinkTransfer: Codable {
+    var title: String
+    var url: String
+    var sortOrder: Int
+}
+
+struct StopTodoTransfer: Codable {
+    var text: String
+    var isCompleted: Bool
+    var sortOrder: Int
 }
 
 struct BookingTransfer: Codable {

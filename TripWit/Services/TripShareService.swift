@@ -44,6 +44,12 @@ struct TripShareService {
                             website: stop.website,
                             comments: stop.commentsArray.map { c in
                                 CommentTransfer(text: c.wrappedText, createdAt: c.wrappedCreatedAt)
+                            },
+                            links: stop.linksArray.map { l in
+                                StopLinkTransfer(title: l.wrappedTitle, url: l.wrappedURL, sortOrder: Int(l.sortOrder))
+                            },
+                            todos: stop.todosArray.map { t in
+                                StopTodoTransfer(text: t.wrappedText, isCompleted: t.isCompleted, sortOrder: Int(t.sortOrder))
                             }
                         )
                     }
@@ -170,6 +176,26 @@ struct TripShareService {
                     let comment = CommentEntity.create(in: context, text: commentT.text)
                     comment.createdAt = commentT.createdAt
                     comment.stop = stop
+                }
+
+                for linkT in stopT.links {
+                    let link = StopLinkEntity.create(
+                        in: context,
+                        title: linkT.title,
+                        url: linkT.url,
+                        sortOrder: linkT.sortOrder
+                    )
+                    link.stop = stop
+                }
+
+                for todoT in stopT.todos {
+                    let todo = StopTodoEntity.create(
+                        in: context,
+                        text: todoT.text,
+                        sortOrder: todoT.sortOrder
+                    )
+                    todo.isCompleted = todoT.isCompleted
+                    todo.stop = stop
                 }
             }
         }
