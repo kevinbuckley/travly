@@ -8,6 +8,7 @@
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
+				<string>public.content</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>TripWit Trip</string>
@@ -19,6 +20,8 @@
 				<array>
 					<string>tripwit</string>
 				</array>
+				<key>public.mime-type</key>
+				<string>application/x-tripwit</string>
 			</dict>
 		</dict>
 	</array>
@@ -41,7 +44,7 @@
 			<key>CFBundleTypeName</key>
 			<string>TripWit Trip</string>
 			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
+			<string>Editor</string>
 			<key>LSHandlerRank</key>
 			<string>Owner</string>
 			<key>LSItemContentTypes</key>

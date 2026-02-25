@@ -851,7 +851,7 @@ struct TripDetailView: View {
     private func shareTripFile() {
         do {
             let fileURL = try TripShareService.exportTrip(trip)
-            ShareSheet.shareTripFile(fileURL)
+            ShareSheet.shareTripFile(fileURL, tripName: trip.wrappedName)
         } catch {
             // Export failed silently — user can retry
         }
