@@ -3,7 +3,6 @@ import SwiftUI
 struct BookingDetailView: View {
 
     @ObservedObject var booking: BookingEntity
-    var canEdit: Bool = true
     @State private var showingEditBooking = false
 
     private var dateFormatter: DateFormatter {
@@ -29,7 +28,7 @@ struct BookingDetailView: View {
                 Text("Booking No Longer Available")
                     .font(.title3)
                     .fontWeight(.semibold)
-                Text("This booking was removed or the trip was unshared.")
+                Text("This booking may have been deleted.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -103,11 +102,9 @@ struct BookingDetailView: View {
         .navigationTitle(booking.wrappedTitle)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            if canEdit {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Edit") {
-                        showingEditBooking = true
-                    }
+            ToolbarItem(placement: .primaryAction) {
+                Button("Edit") {
+                    showingEditBooking = true
                 }
             }
         }

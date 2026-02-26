@@ -4,7 +4,6 @@ import CoreData
 struct BudgetSection: View {
     @Environment(\.managedObjectContext) private var viewContext
     @ObservedObject var trip: TripEntity
-    var canEdit: Bool = true
 
     @State private var showingAddExpense = false
     @State private var expenseToEdit: ExpenseEntity?
@@ -65,34 +64,28 @@ struct BudgetSection: View {
             } else {
                 ForEach(sortedExpenses) { expense in
                     Button {
-                        if canEdit {
-                            expenseToEdit = expense
-                        }
+                        expenseToEdit = expense
                     } label: {
                         expenseRow(expense)
                     }
                     .buttonStyle(.plain)
                     .swipeActions(edge: .trailing) {
-                        if canEdit {
-                            Button(role: .destructive) {
-                                expenseToDelete = expense
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
+                        Button(role: .destructive) {
+                            expenseToDelete = expense
+                        } label: {
+                            Label("Delete", systemImage: "trash")
                         }
                     }
                 }
             }
 
             // Add button
-            if canEdit {
-                Button {
-                    showingAddExpense = true
-                } label: {
-                    Label("Add Expense", systemImage: "plus.circle")
-                        .font(.subheadline)
-                        .foregroundStyle(.blue)
-                }
+            Button {
+                showingAddExpense = true
+            } label: {
+                Label("Add Expense", systemImage: "plus.circle")
+                    .font(.subheadline)
+                    .foregroundStyle(.blue)
             }
         } header: {
             HStack {

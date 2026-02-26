@@ -7,7 +7,6 @@ struct StopDetailView: View {
 
     @Environment(\.managedObjectContext) private var viewContext
     @ObservedObject var stop: StopEntity
-    var canEdit: Bool = true
 
     @State private var showingEditStop = false
     @State private var showingNearbyAI = false
@@ -56,7 +55,7 @@ struct StopDetailView: View {
             Text("Stop No Longer Available")
                 .font(.title3)
                 .fontWeight(.semibold)
-            Text("This stop was removed or the trip was unshared.")
+            Text("This stop may have been deleted.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -194,11 +193,9 @@ struct StopDetailView: View {
         .navigationTitle(stop.wrappedName)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            if canEdit {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Edit") {
-                        showingEditStop = true
-                    }
+            ToolbarItem(placement: .primaryAction) {
+                Button("Edit") {
+                    showingEditStop = true
                 }
             }
         }
@@ -247,7 +244,7 @@ struct StopDetailView: View {
     private var visitedContent: some View {
         if stop.isVisited {
             visitedStatusRow
-        } else if canEdit {
+        } else {
             markAsVisitedButton
         }
     }
@@ -267,31 +264,26 @@ struct StopDetailView: View {
                     }
                 }
                 Spacer()
-                if canEdit {
-                    Button("Undo") {
-                        showingUndoVisitedAlert = true
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.red)
+                Button("Undo") {
+                    showingUndoVisitedAlert = true
                 }
+                .font(.subheadline)
+                .foregroundStyle(.red)
             }
 
             // Star rating display / editor
             HStack(spacing: 4) {
                 ForEach(1...5, id: \.self) { star in
                     Button {
-                        if canEdit {
-                            stop.rating = Int32(star)
-                            stop.day?.trip?.updatedAt = Date()
-                            try? viewContext.save()
-                        }
+                        stop.rating = Int32(star)
+                        stop.day?.trip?.updatedAt = Date()
+                        try? viewContext.save()
                     } label: {
                         Image(systemName: star <= Int(stop.rating) ? "star.fill" : "star")
                             .font(.title3)
                             .foregroundStyle(star <= stop.rating ? .yellow : Color(.systemGray4))
                     }
                     .buttonStyle(.plain)
-                    .disabled(!canEdit)
                 }
                 if stop.rating > 0 {
                     Text("\(stop.rating)/5")
@@ -369,18 +361,15 @@ struct StopDetailView: View {
                 }
             }
             .onDelete { offsets in
-                if canEdit { deleteLinks(at: offsets) }
+                deleteLinks(at: offsets)
             }
-            .deleteDisabled(!canEdit)
 
-            if canEdit {
-                Button {
-                    showingAddLink = true
-                } label: {
-                    Label("Add Link", systemImage: "plus.circle")
-                        .font(.subheadline)
-                        .foregroundStyle(.blue)
-                }
+            Button {
+                showingAddLink = true
+            } label: {
+                Label("Add Link", systemImage: "plus.circle")
+                    .font(.subheadline)
+                    .foregroundStyle(.blue)
             }
         } header: {
             HStack {
@@ -444,17 +433,14 @@ struct StopDetailView: View {
             ForEach(stop.todosArray) { todo in
                 HStack(spacing: 10) {
                     Button {
-                        if canEdit {
-                            todo.isCompleted.toggle()
-                            stop.day?.trip?.updatedAt = Date()
-                            try? viewContext.save()
-                        }
+                        todo.isCompleted.toggle()
+                        stop.day?.trip?.updatedAt = Date()
+                        try? viewContext.save()
                     } label: {
                         Image(systemName: todo.isCompleted ? "checkmark.circle.fill" : "circle")
                             .foregroundStyle(todo.isCompleted ? .green : .gray)
                     }
                     .buttonStyle(.plain)
-                    .disabled(!canEdit)
 
                     Text(todo.wrappedText)
                         .font(.subheadline)
@@ -463,26 +449,23 @@ struct StopDetailView: View {
                 }
             }
             .onDelete { offsets in
-                if canEdit { deleteTodos(at: offsets) }
+                deleteTodos(at: offsets)
             }
-            .deleteDisabled(!canEdit)
 
-            if canEdit {
-                HStack(spacing: 8) {
-                    TextField("Add todo...", text: $newTodoText)
-                        .font(.subheadline)
-                        .onSubmit { addTodo() }
-                    Button {
-                        addTodo()
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(
-                                newTodoText.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .blue
-                            )
-                    }
-                    .disabled(newTodoText.trimmingCharacters(in: .whitespaces).isEmpty)
-                    .buttonStyle(.plain)
+            HStack(spacing: 8) {
+                TextField("Add todo...", text: $newTodoText)
+                    .font(.subheadline)
+                    .onSubmit { addTodo() }
+                Button {
+                    addTodo()
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(
+                            newTodoText.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .blue
+                        )
                 }
+                .disabled(newTodoText.trimmingCharacters(in: .whitespaces).isEmpty)
+                .buttonStyle(.plain)
             }
         } header: {
             HStack {
@@ -530,18 +513,13 @@ struct StopDetailView: View {
 
     private var commentsSection: some View {
         Section {
-            if canEdit {
-                addCommentRow
-            }
+            addCommentRow
             ForEach(sortedComments) { comment in
                 commentRow(comment)
             }
             .onDelete { offsets in
-                if canEdit {
-                    deleteComments(at: offsets)
-                }
+                deleteComments(at: offsets)
             }
-            .deleteDisabled(!canEdit)
         } header: {
             HStack {
                 Text("Comments")

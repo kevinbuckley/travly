@@ -120,7 +120,7 @@ struct ContentView: View {
                                 Text("Trip No Longer Available")
                                     .font(.title3)
                                     .fontWeight(.semibold)
-                                Text("This trip was removed or the owner stopped sharing it.")
+                                Text("This trip may have been deleted.")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)

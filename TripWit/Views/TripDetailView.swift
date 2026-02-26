@@ -64,7 +64,7 @@ struct TripDetailView: View {
         }
     }
 
-    /// Shown when the observed trip has been deleted (e.g. owner stopped sharing).
+    /// Shown when the observed trip has been deleted.
     private var deletedTripView: some View {
         VStack(spacing: 16) {
             Image(systemName: "trash.circle")
@@ -73,7 +73,7 @@ struct TripDetailView: View {
             Text("Trip No Longer Available")
                 .font(.title3)
                 .fontWeight(.semibold)
-            Text("This trip was removed or the owner stopped sharing it.")
+            Text("This trip may have been deleted.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

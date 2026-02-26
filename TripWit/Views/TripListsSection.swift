@@ -4,7 +4,6 @@ import CoreData
 struct TripListsSection: View {
     @Environment(\.managedObjectContext) private var viewContext
     let trip: TripEntity
-    var canEdit: Bool = true
 
     @State private var newItemTexts: [UUID: String] = [:]
     @State private var dayPickerItem: TripListItemEntity?
@@ -36,9 +35,7 @@ struct TripListsSection: View {
         ForEach(sortedLists) { list in
             listSection(list)
         }
-        if canEdit {
-            addListSection
-        }
+        addListSection
         EmptyView()
             .sheet(item: $dayPickerItem) { item in
                 addToDaySheet(item: item)
@@ -71,19 +68,14 @@ struct TripListsSection: View {
                 itemRow(item, list: list)
             }
             .onDelete { offsets in
-                if canEdit {
-                    let items = list.itemsArray.sorted { $0.sortOrder < $1.sortOrder }
-                    if let index = offsets.first {
-                        itemToDelete = items[index]
-                        showingDeleteConfirmation = true
-                    }
+                let items = list.itemsArray.sorted { $0.sortOrder < $1.sortOrder }
+                if let index = offsets.first {
+                    itemToDelete = items[index]
+                    showingDeleteConfirmation = true
                 }
             }
-            .deleteDisabled(!canEdit)
 
-            if canEdit {
-                addItemRow(for: list)
-            }
+            addItemRow(for: list)
         } header: {
             HStack {
                 Label(list.wrappedName, systemImage: list.wrappedIcon)
@@ -102,17 +94,14 @@ struct TripListsSection: View {
     private func itemRow(_ item: TripListItemEntity, list: TripListEntity) -> some View {
         HStack(spacing: 10) {
             Button {
-                if canEdit {
-                    item.isChecked.toggle()
-                    trip.updatedAt = Date()
-                    try? viewContext.save()
-                }
+                item.isChecked.toggle()
+                trip.updatedAt = Date()
+                try? viewContext.save()
             } label: {
                 Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(item.isChecked ? .green : .gray)
             }
             .buttonStyle(.plain)
-            .disabled(!canEdit)
 
             Text(item.wrappedText)
                 .font(.subheadline)
@@ -122,7 +111,7 @@ struct TripListsSection: View {
             Spacer()
 
             // Only show "Add to Day" for Checklist-type lists (not Packing)
-            if canEdit, list.wrappedName == "Checklist" || list.wrappedName == "To-Do" {
+            if list.wrappedName == "Checklist" || list.wrappedName == "To-Do" {
                 Button {
                     dayPickerItem = item
                 } label: {
