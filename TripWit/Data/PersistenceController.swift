@@ -8,10 +8,14 @@ final class PersistenceController: ObservableObject {
 
     static let shared = PersistenceController()
 
-    let container: NSPersistentCloudKitContainer
+    let container: NSPersistentContainer
 
     private static let containerIdentifier = "iCloud.com.kevinbuckley.travelplanner"
     private static let appTransactionAuthorName = "TripWit"
+
+    /// True when running under XCTest — uses a plain container to avoid
+    /// CloudKit entity registration that conflicts with test containers.
+    private static let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 
     /// Token for tracking which persistent history changes have been consumed.
     private var lastHistoryToken: NSPersistentHistoryToken? {
@@ -31,9 +35,13 @@ final class PersistenceController: ObservableObject {
     }
 
     init(inMemory: Bool = false) {
-        container = NSPersistentCloudKitContainer(name: "TripWit")
+        if Self.isRunningTests || inMemory {
+            container = NSPersistentContainer(name: "TripWit")
+        } else {
+            container = NSPersistentCloudKitContainer(name: "TripWit")
+        }
 
-        if inMemory {
+        if Self.isRunningTests || inMemory {
             let desc = NSPersistentStoreDescription()
             desc.url = URL(fileURLWithPath: "/dev/null")
             container.persistentStoreDescriptions = [desc]
@@ -86,17 +94,19 @@ final class PersistenceController: ObservableObject {
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
 
-        // Set transaction author so persistent history can distinguish
-        // local changes from remote ones — critical for deduplication.
-        container.viewContext.transactionAuthor = Self.appTransactionAuthorName
+        if !Self.isRunningTests {
+            // Set transaction author so persistent history can distinguish
+            // local changes from remote ones — critical for deduplication.
+            container.viewContext.transactionAuthor = Self.appTransactionAuthorName
 
-        // Listen for remote changes
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleRemoteChange),
-            name: .NSPersistentStoreRemoteChange,
-            object: container.persistentStoreCoordinator
-        )
+            // Listen for remote changes
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleRemoteChange),
+                name: .NSPersistentStoreRemoteChange,
+                object: container.persistentStoreCoordinator
+            )
+        }
     }
 
     /// Remove any leftover SwiftData .store files from before the Core Data migration.

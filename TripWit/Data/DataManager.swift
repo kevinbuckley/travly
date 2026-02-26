@@ -131,8 +131,8 @@ final class DataManager {
             }
         }
 
-        // Renumber all days sequentially by date
-        let sortedDays = trip.daysArray.sorted { $0.wrappedDate < $1.wrappedDate }
+        // Renumber all days sequentially by date (exclude pending-delete objects)
+        let sortedDays = trip.daysArray.filter { !$0.isDeleted }.sorted { $0.wrappedDate < $1.wrappedDate }
         for (index, day) in sortedDays.enumerated() {
             day.dayNumber = Int32(index + 1)
         }

@@ -57,7 +57,7 @@ fi
 echo ""
 echo "▶ Step 4: App tests (xcodebuild test)"
 cd "$PROJECT_ROOT"
-APP_TEST_OUT=$(xcodebuild test -scheme TripWit -destination "$SIMDEVICE" -only-testing:TripWitTests -quiet 2>&1)
+APP_TEST_OUT=$(xcodebuild test -scheme TripWit -destination "$SIMDEVICE" -only-testing:TripWitTests 2>&1)
 APP_TEST_EXIT=$?
 if [ $APP_TEST_EXIT -eq 0 ]; then
     PASS=$((PASS + 1)); green "  ✓ App tests passed"

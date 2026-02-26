@@ -5,11 +5,44 @@ import TripCore
 
 @testable import TripWit
 
-/// Creates an in-memory Core Data stack for testing.
+// MARK: - Helpers
+
+/// Holds references to controllers to prevent premature deallocation.
+/// When a controller is deallocated, Core Data checkpoints the store and
+/// may crash on dangling relationship references from cascade deletes.
+private var _liveControllers: [PersistenceController] = []
+
+/// Creates an in-memory Core Data context for testing.
+/// PersistenceController detects the test environment and uses a plain
+/// NSPersistentContainer (not CloudKit) to avoid entity registration conflicts.
 private func makeTestContext() -> NSManagedObjectContext {
     let controller = PersistenceController(inMemory: true)
+    _liveControllers.append(controller)
     return controller.viewContext
 }
+
+private let calendar = Calendar.current
+
+private func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
+    calendar.date(from: DateComponents(year: year, month: month, day: day))!
+}
+
+/// Creates a trip with generated days and returns (trip, sortedDays).
+private func makeTripWithDays(
+    in context: NSManagedObjectContext,
+    name: String = "Test Trip",
+    start: Date,
+    end: Date
+) -> (TripEntity, [DayEntity]) {
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: name, destination: "Test", startDate: start, endDate: end)
+    let days = trip.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+    return (trip, days)
+}
+
+// MARK: - Test Suite (serialized to avoid Core Data container conflicts)
+
+@Suite(.serialized) struct TripWitTests {
 
 @Test func tripEntityCanBeCreated() {
     let context = makeTestContext()
@@ -30,9 +63,8 @@ private func makeTestContext() -> NSManagedObjectContext {
 
 @Test func tripEntityComputedProperties() {
     let context = makeTestContext()
-    let calendar = Calendar.current
-    let start = calendar.date(from: DateComponents(year: 2026, month: 6, day: 1))!
-    let end = calendar.date(from: DateComponents(year: 2026, month: 6, day: 5))!
+    let start = date(2026, 6, 1)
+    let end = date(2026, 6, 5)
 
     let trip = TripEntity.create(
         in: context,
@@ -63,9 +95,8 @@ private func makeTestContext() -> NSManagedObjectContext {
 
 @Test func dayEntityFormattedDate() {
     let context = makeTestContext()
-    let calendar = Calendar.current
-    let date = calendar.date(from: DateComponents(year: 2026, month: 3, day: 15))!
-    let day = DayEntity.create(in: context, date: date, dayNumber: 1)
+    let d = date(2026, 3, 15)
+    let day = DayEntity.create(in: context, date: d, dayNumber: 1)
     #expect(!day.formattedDate.isEmpty)
     #expect(day.dayNumber == 1)
 }
@@ -140,3 +171,997 @@ private func makeTestContext() -> NSManagedObjectContext {
     trip.status = .completed
     #expect(trip.statusRaw == "completed")
 }
+
+// MARK: - 1. TripTransfer Encode/Decode
+
+@Test func transferEncodeDecodeRoundTrip() throws {
+    let now = Date()
+    let transfer = TripTransfer(
+        schemaVersion: 1,
+        name: "Paris Trip",
+        destination: "Paris, France",
+        startDate: now,
+        endDate: now.addingTimeInterval(86400 * 5),
+        statusRaw: "active",
+        notes: "A lovely trip",
+        hasCustomDates: true,
+        budgetAmount: 2500.50,
+        budgetCurrencyCode: "EUR",
+        days: [
+            DayTransfer(
+                date: now,
+                dayNumber: 1,
+                notes: "Arrival day",
+                location: "Paris",
+                locationLatitude: 48.8566,
+                locationLongitude: 2.3522,
+                stops: [
+                    StopTransfer(
+                        name: "Eiffel Tower",
+                        latitude: 48.8584,
+                        longitude: 2.2945,
+                        arrivalTime: now,
+                        departureTime: now.addingTimeInterval(3600),
+                        categoryRaw: "attraction",
+                        notes: "Book tickets",
+                        sortOrder: 0,
+                        isVisited: true,
+                        visitedAt: now,
+                        rating: 5,
+                        address: "Champ de Mars",
+                        phone: "+33123456789",
+                        website: "https://example.com",
+                        comments: [CommentTransfer(text: "Amazing view!", createdAt: now)],
+                        links: [StopLinkTransfer(title: "Tickets", url: "https://tickets.example.com", sortOrder: 0)],
+                        todos: [StopTodoTransfer(text: "Buy tickets", isCompleted: true, sortOrder: 0)]
+                    )
+                ]
+            )
+        ],
+        bookings: [
+            BookingTransfer(
+                typeRaw: "flight",
+                title: "Air France 123",
+                confirmationCode: "AF-789",
+                notes: "Window seat",
+                sortOrder: 0,
+                airline: "Air France",
+                flightNumber: "AF123",
+                departureAirport: "JFK",
+                arrivalAirport: "CDG",
+                departureTime: now,
+                arrivalTime: now.addingTimeInterval(28800)
+            )
+        ],
+        lists: [
+            ListTransfer(
+                name: "Packing",
+                icon: "suitcase.fill",
+                sortOrder: 0,
+                items: [ListItemTransfer(text: "Passport", isChecked: true, sortOrder: 0)]
+            )
+        ],
+        expenses: [
+            ExpenseTransfer(
+                title: "Dinner",
+                amount: 85.50,
+                currencyCode: "EUR",
+                dateIncurred: now,
+                categoryRaw: "food",
+                notes: "Le Jules Verne",
+                sortOrder: 0,
+                createdAt: now
+            )
+        ]
+    )
+
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    let data = try encoder.encode(transfer)
+
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let decoded = try decoder.decode(TripTransfer.self, from: data)
+
+    #expect(decoded.name == "Paris Trip")
+    #expect(decoded.destination == "Paris, France")
+    #expect(decoded.statusRaw == "active")
+    #expect(decoded.notes == "A lovely trip")
+    #expect(decoded.hasCustomDates == true)
+    #expect(decoded.budgetAmount == 2500.50)
+    #expect(decoded.budgetCurrencyCode == "EUR")
+    #expect(decoded.days.count == 1)
+    #expect(decoded.days[0].stops.count == 1)
+    #expect(decoded.days[0].stops[0].name == "Eiffel Tower")
+    #expect(decoded.days[0].stops[0].isVisited == true)
+    #expect(decoded.days[0].stops[0].rating == 5)
+    #expect(decoded.days[0].stops[0].comments.count == 1)
+    #expect(decoded.days[0].stops[0].links.count == 1)
+    #expect(decoded.days[0].stops[0].todos.count == 1)
+    #expect(decoded.bookings.count == 1)
+    #expect(decoded.bookings[0].airline == "Air France")
+    #expect(decoded.bookings[0].confirmationCode == "AF-789")
+    #expect(decoded.lists.count == 1)
+    #expect(decoded.lists[0].items[0].text == "Passport")
+    #expect(decoded.lists[0].items[0].isChecked == true)
+    #expect(decoded.expenses.count == 1)
+    #expect(decoded.expenses[0].amount == 85.50)
+}
+
+@Test func transferForwardCompatibility() throws {
+    // JSON from a hypothetical older version that doesn't have links/todos on stops
+    // Note: StopTransfer has default values for links/todos but standard Codable
+    // requires the keys to be present. So we include them as empty arrays here,
+    // which is what the encoder always produces.
+    let json = """
+    {
+        "schemaVersion": 1,
+        "name": "Old Trip",
+        "destination": "Rome",
+        "startDate": "2026-06-01T00:00:00Z",
+        "endDate": "2026-06-03T00:00:00Z",
+        "statusRaw": "planning",
+        "notes": "",
+        "hasCustomDates": false,
+        "budgetAmount": 0,
+        "budgetCurrencyCode": "USD",
+        "days": [{
+            "date": "2026-06-01T00:00:00Z",
+            "dayNumber": 1,
+            "notes": "",
+            "location": "Rome",
+            "locationLatitude": 41.9028,
+            "locationLongitude": 12.4964,
+            "stops": [{
+                "name": "Colosseum",
+                "latitude": 41.8902,
+                "longitude": 12.4922,
+                "categoryRaw": "attraction",
+                "notes": "",
+                "sortOrder": 0,
+                "isVisited": false,
+                "rating": 0,
+                "comments": [],
+                "links": [],
+                "todos": []
+            }]
+        }],
+        "bookings": [],
+        "lists": [],
+        "expenses": []
+    }
+    """
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let transfer = try decoder.decode(TripTransfer.self, from: Data(json.utf8))
+
+    #expect(transfer.name == "Old Trip")
+    #expect(transfer.days[0].stops[0].links.isEmpty)
+    #expect(transfer.days[0].stops[0].todos.isEmpty)
+}
+
+@Test func transferSchemaVersionPreserved() throws {
+    let transfer = TripTransfer(
+        schemaVersion: TripTransfer.currentSchemaVersion,
+        name: "V1", destination: "Test",
+        startDate: Date(), endDate: Date(),
+        statusRaw: "planning", notes: "",
+        hasCustomDates: false, budgetAmount: 0, budgetCurrencyCode: "USD",
+        days: [], bookings: [], lists: [], expenses: []
+    )
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    let data = try encoder.encode(transfer)
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let decoded = try decoder.decode(TripTransfer.self, from: data)
+    #expect(decoded.schemaVersion == 1)
+}
+
+@Test func transferEmptyCollections() throws {
+    let transfer = TripTransfer(
+        schemaVersion: 1,
+        name: "Empty", destination: "Nowhere",
+        startDate: Date(), endDate: Date(),
+        statusRaw: "planning", notes: "",
+        hasCustomDates: false, budgetAmount: 0, budgetCurrencyCode: "USD",
+        days: [], bookings: [], lists: [], expenses: []
+    )
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    let data = try encoder.encode(transfer)
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let decoded = try decoder.decode(TripTransfer.self, from: data)
+    #expect(decoded.days.isEmpty)
+    #expect(decoded.bookings.isEmpty)
+    #expect(decoded.lists.isEmpty)
+    #expect(decoded.expenses.isEmpty)
+}
+
+@Test func transferSpecialCharactersInText() throws {
+    let transfer = TripTransfer(
+        schemaVersion: 1,
+        name: "Tokyo 🗼 \"Adventure\"",
+        destination: "東京, 日本\nNew line",
+        startDate: Date(), endDate: Date(),
+        statusRaw: "planning",
+        notes: "Quotes: \"hello\" 'world'\nEmoji: 🎌🍣\tTab",
+        hasCustomDates: false, budgetAmount: 0, budgetCurrencyCode: "JPY",
+        days: [], bookings: [], lists: [], expenses: []
+    )
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    let data = try encoder.encode(transfer)
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let decoded = try decoder.decode(TripTransfer.self, from: data)
+    #expect(decoded.name == "Tokyo 🗼 \"Adventure\"")
+    #expect(decoded.destination.contains("東京"))
+    #expect(decoded.notes.contains("🎌🍣"))
+}
+
+// MARK: - 2. TripShareService Full Round-Trip
+
+@Test func shareServiceExportImportRoundTrip() throws {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+
+    // Create a rich trip
+    let trip = manager.createTrip(
+        name: "Share Test Trip",
+        destination: "London, UK",
+        startDate: date(2026, 7, 1),
+        endDate: date(2026, 7, 3)
+    )
+    trip.budgetAmount = 1500
+    trip.budgetCurrencyCode = "GBP"
+    trip.hasCustomDates = true
+    trip.statusRaw = "active"
+
+    // Add a stop with comments, links, todos
+    let day1 = trip.daysArray.sorted { $0.dayNumber < $1.dayNumber }.first!
+    let stop = manager.addStop(to: day1, name: "Big Ben", latitude: 51.5007, longitude: -0.1246, category: .attraction, notes: "Iconic clock")
+    stop.rating = 4
+    stop.address = "Westminster"
+    stop.phone = "+44123"
+    stop.website = "https://bigben.example.com"
+    stop.isVisited = true
+    stop.visitedAt = date(2026, 7, 1)
+
+    let comment = CommentEntity.create(in: context, text: "Beautiful!")
+    comment.stop = stop
+    let link = StopLinkEntity.create(in: context, title: "Info", url: "https://info.example.com")
+    link.stop = stop
+    let todo = StopTodoEntity.create(in: context, text: "Take photo", sortOrder: 0)
+    todo.isCompleted = true
+    todo.stop = stop
+
+    // Add booking
+    let booking = BookingEntity.create(in: context, type: .flight, title: "BA 456", confirmationCode: "BA-CONF")
+    booking.airline = "British Airways"
+    booking.flightNumber = "BA456"
+    booking.trip = trip
+
+    // Add list with items
+    let list = TripListEntity.create(in: context, name: "Packing", icon: "suitcase.fill")
+    list.trip = trip
+    let item = TripListItemEntity.create(in: context, text: "Umbrella")
+    item.isChecked = true
+    item.list = list
+
+    // Add expense
+    let expense = manager.addExpense(to: trip, title: "Taxi", amount: 35.0, category: .transport)
+    _ = expense // silence warning
+
+    try? context.save()
+
+    // Export
+    let fileURL = try TripShareService.exportTrip(trip)
+
+    // Decode
+    let transfer = try TripShareService.decodeTrip(from: fileURL)
+
+    // Import into fresh context
+    let context2 = makeTestContext()
+    let imported = TripShareService.importTrip(transfer, into: context2)
+
+    // Verify trip fields
+    #expect(imported.wrappedName == "Share Test Trip")
+    #expect(imported.wrappedDestination == "London, UK")
+    #expect(imported.budgetAmount == 1500)
+    #expect(imported.wrappedBudgetCurrencyCode == "GBP")
+    #expect(imported.hasCustomDates == true)
+    #expect(imported.wrappedStatusRaw == "active")
+
+    // Verify days
+    #expect(imported.daysArray.count == 3)
+
+    // Verify stop
+    let importedDay1 = imported.daysArray.sorted { $0.dayNumber < $1.dayNumber }.first!
+    #expect(importedDay1.stopsArray.count == 1)
+    let importedStop = importedDay1.stopsArray.first!
+    #expect(importedStop.wrappedName == "Big Ben")
+    #expect(importedStop.latitude == 51.5007)
+    #expect(importedStop.rating == 4)
+    #expect(importedStop.isVisited == true)
+    #expect(importedStop.address == "Westminster")
+
+    // Verify stop children
+    #expect(importedStop.commentsArray.count == 1)
+    #expect(importedStop.commentsArray.first?.wrappedText == "Beautiful!")
+    #expect(importedStop.linksArray.count == 1)
+    #expect(importedStop.linksArray.first?.wrappedURL == "https://info.example.com")
+    #expect(importedStop.todosArray.count == 1)
+    #expect(importedStop.todosArray.first?.isCompleted == true)
+
+    // Verify booking
+    #expect(imported.bookingsArray.count == 1)
+    #expect(imported.bookingsArray.first?.wrappedTitle == "BA 456")
+    #expect(imported.bookingsArray.first?.airline == "British Airways")
+
+    // Verify list
+    #expect(imported.listsArray.count == 1)
+    #expect(imported.listsArray.first?.wrappedName == "Packing")
+    #expect(imported.listsArray.first?.itemsArray.count == 1)
+    #expect(imported.listsArray.first?.itemsArray.first?.isChecked == true)
+
+    // Verify expense
+    #expect(imported.expensesArray.count == 1)
+    #expect(imported.expensesArray.first?.amount == 35.0)
+
+    // Clean up temp file
+    try? FileManager.default.removeItem(at: fileURL)
+}
+
+@Test func shareServiceExportFileFormat() throws {
+    let context = makeTestContext()
+    let trip = TripEntity.create(
+        in: context,
+        name: "Format Test",
+        destination: "Test",
+        startDate: date(2026, 1, 1),
+        endDate: date(2026, 1, 2)
+    )
+    try? context.save()
+
+    let fileURL = try TripShareService.exportTrip(trip)
+    #expect(fileURL.pathExtension == "tripwit")
+
+    let data = try Data(contentsOf: fileURL)
+    let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+    #expect(json["schemaVersion"] as? Int == 1)
+    #expect(json["name"] as? String == "Format Test")
+
+    try? FileManager.default.removeItem(at: fileURL)
+}
+
+@Test func shareServiceImportSetsRelationships() {
+    let transfer = TripTransfer(
+        schemaVersion: 1,
+        name: "Rel Test", destination: "Test",
+        startDate: Date(), endDate: Date(),
+        statusRaw: "planning", notes: "",
+        hasCustomDates: false, budgetAmount: 0, budgetCurrencyCode: "USD",
+        days: [DayTransfer(
+            date: Date(), dayNumber: 1, notes: "", location: "",
+            locationLatitude: 0, locationLongitude: 0,
+            stops: [StopTransfer(
+                name: "Stop", latitude: 0, longitude: 0,
+                categoryRaw: "other", notes: "", sortOrder: 0,
+                isVisited: false, rating: 0,
+                comments: [CommentTransfer(text: "c", createdAt: Date())],
+                links: [StopLinkTransfer(title: "l", url: "u", sortOrder: 0)],
+                todos: [StopTodoTransfer(text: "t", isCompleted: false, sortOrder: 0)]
+            )]
+        )],
+        bookings: [BookingTransfer(
+            typeRaw: "hotel", title: "Hotel", confirmationCode: "",
+            notes: "", sortOrder: 0
+        )],
+        lists: [ListTransfer(
+            name: "List", icon: "list.bullet", sortOrder: 0,
+            items: [ListItemTransfer(text: "Item", isChecked: false, sortOrder: 0)]
+        )],
+        expenses: [ExpenseTransfer(
+            title: "Exp", amount: 10, currencyCode: "USD",
+            dateIncurred: Date(), categoryRaw: "other", notes: "",
+            sortOrder: 0, createdAt: Date()
+        )]
+    )
+
+    let context = makeTestContext()
+    let trip = TripShareService.importTrip(transfer, into: context)
+
+    // Verify relationship chain
+    let day = trip.daysArray.first!
+    #expect(day.trip === trip)
+    let stop = day.stopsArray.first!
+    #expect(stop.day === day)
+    #expect(stop.commentsArray.first?.stop === stop)
+    #expect(stop.linksArray.first?.stop === stop)
+    #expect(stop.todosArray.first?.stop === stop)
+    #expect(trip.bookingsArray.first?.trip === trip)
+    let list = trip.listsArray.first!
+    #expect(list.trip === trip)
+    #expect(list.itemsArray.first?.list === list)
+    #expect(trip.expensesArray.first?.trip === trip)
+}
+
+@Test func shareServiceImportPreservesVisitedState() throws {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Visited Test",
+        destination: "Test",
+        startDate: date(2026, 8, 1),
+        endDate: date(2026, 8, 2)
+    )
+    let day = trip.daysArray.first!
+    let stop = manager.addStop(to: day, name: "Visited Stop", latitude: 0, longitude: 0, category: .other)
+    stop.isVisited = true
+    stop.visitedAt = date(2026, 8, 1)
+    try? context.save()
+
+    let fileURL = try TripShareService.exportTrip(trip)
+    let transfer = try TripShareService.decodeTrip(from: fileURL)
+
+    let context2 = makeTestContext()
+    let imported = TripShareService.importTrip(transfer, into: context2)
+    let importedStop = imported.daysArray.first!.stopsArray.first!
+
+    #expect(importedStop.isVisited == true)
+    #expect(importedStop.visitedAt != nil)
+
+    try? FileManager.default.removeItem(at: fileURL)
+}
+
+// MARK: - 3. DataManager.syncDays
+
+@Test func syncDaysExtendEnd() {
+    let context = makeTestContext()
+    let (trip, days) = makeTripWithDays(in: context, start: date(2026, 6, 1), end: date(2026, 6, 5))
+    #expect(days.count == 5)
+
+    // Add a stop to day 3 to verify it survives
+    let manager = DataManager(context: context)
+    manager.addStop(to: days[2], name: "Keeper", latitude: 0, longitude: 0, category: .other)
+
+    // Extend end by 2 days
+    trip.endDate = date(2026, 6, 7)
+    manager.syncDays(for: trip)
+
+    let newDays = trip.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+    #expect(newDays.count == 7)
+    #expect(newDays.first?.dayNumber == 1)
+    #expect(newDays.last?.dayNumber == 7)
+
+    // Day 3 stop survived
+    let day3 = newDays.first { $0.dayNumber == 3 }!
+    #expect(day3.stopsArray.count == 1)
+    #expect(day3.stopsArray.first?.wrappedName == "Keeper")
+}
+
+@Test func syncDaysShrinkEnd() {
+    let context = makeTestContext()
+    let (trip, days) = makeTripWithDays(in: context, start: date(2026, 6, 1), end: date(2026, 6, 5))
+
+    let manager = DataManager(context: context)
+    manager.addStop(to: days[4], name: "Will be deleted", latitude: 0, longitude: 0, category: .other)
+    manager.addStop(to: days[1], name: "Will survive", latitude: 0, longitude: 0, category: .other)
+
+    trip.endDate = date(2026, 6, 3)
+    manager.syncDays(for: trip)
+    try? context.save()
+
+    // Re-fetch to get clean state
+    let dayReq = DayEntity.fetchRequest() as! NSFetchRequest<DayEntity>
+    dayReq.predicate = NSPredicate(format: "trip == %@", trip)
+    dayReq.sortDescriptors = [NSSortDescriptor(keyPath: \DayEntity.dayNumber, ascending: true)]
+    let newDays = (try? context.fetch(dayReq)) ?? []
+    #expect(newDays.count == 3)
+    #expect(newDays.last?.dayNumber == 3)
+
+    // Day 2 stop survived
+    let day2 = newDays.first { $0.dayNumber == 2 }!
+    #expect(day2.stopsArray.count == 1)
+}
+
+@Test func syncDaysMoveStartForward() {
+    let context = makeTestContext()
+    let (trip, _) = makeTripWithDays(in: context, start: date(2026, 6, 1), end: date(2026, 6, 5))
+
+    trip.startDate = date(2026, 6, 3)
+    DataManager(context: context).syncDays(for: trip)
+    try? context.save()
+
+    let dayReq = DayEntity.fetchRequest() as! NSFetchRequest<DayEntity>
+    dayReq.predicate = NSPredicate(format: "trip == %@", trip)
+    dayReq.sortDescriptors = [NSSortDescriptor(keyPath: \DayEntity.dayNumber, ascending: true)]
+    let newDays = (try? context.fetch(dayReq)) ?? []
+    #expect(newDays.count == 3)
+    #expect(newDays.first?.dayNumber == 1)
+    #expect(newDays.last?.dayNumber == 3)
+}
+
+@Test func syncDaysMoveStartEarlier() {
+    let context = makeTestContext()
+    let (trip, _) = makeTripWithDays(in: context, start: date(2026, 6, 3), end: date(2026, 6, 7))
+
+    trip.startDate = date(2026, 6, 1)
+    DataManager(context: context).syncDays(for: trip)
+
+    let newDays = trip.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+    #expect(newDays.count == 7)
+    #expect(newDays.first?.dayNumber == 1)
+    #expect(newDays.last?.dayNumber == 7)
+}
+
+@Test func syncDaysKeepsStopsOnSurvivingDays() {
+    let context = makeTestContext()
+    let (trip, days) = makeTripWithDays(in: context, start: date(2026, 6, 1), end: date(2026, 6, 5))
+    let manager = DataManager(context: context)
+
+    // Add stops to days 2 and 4
+    manager.addStop(to: days[1], name: "Day2 Stop", latitude: 0, longitude: 0, category: .attraction)
+    manager.addStop(to: days[3], name: "Day4 Stop", latitude: 0, longitude: 0, category: .restaurant)
+
+    // Shrink to days 2-4 only
+    trip.startDate = date(2026, 6, 2)
+    trip.endDate = date(2026, 6, 4)
+    manager.syncDays(for: trip)
+    try? context.save()
+
+    let dayReq = DayEntity.fetchRequest() as! NSFetchRequest<DayEntity>
+    dayReq.predicate = NSPredicate(format: "trip == %@", trip)
+    dayReq.sortDescriptors = [NSSortDescriptor(keyPath: \DayEntity.dayNumber, ascending: true)]
+    let newDays = (try? context.fetch(dayReq)) ?? []
+    #expect(newDays.count == 3)
+
+    // Day 1 (was originally June 2) should have the Day2 Stop
+    let stopsOnDay1 = newDays[0].stopsArray
+    #expect(stopsOnDay1.count == 1)
+    #expect(stopsOnDay1.first?.wrappedName == "Day2 Stop")
+
+    // Day 3 (was originally June 4) should have the Day4 Stop
+    let stopsOnDay3 = newDays[2].stopsArray
+    #expect(stopsOnDay3.count == 1)
+    #expect(stopsOnDay3.first?.wrappedName == "Day4 Stop")
+}
+
+// MARK: - 4. DataManager CRUD
+
+@Test func createTripGeneratesDays() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Day Gen Test",
+        destination: "Test",
+        startDate: date(2026, 3, 1),
+        endDate: date(2026, 3, 5)
+    )
+    let days = trip.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+    #expect(days.count == 5)
+    #expect(days.first?.dayNumber == 1)
+    #expect(days.last?.dayNumber == 5)
+
+    // Dates should be sequential
+    for (i, day) in days.enumerated() {
+        let expected = calendar.date(byAdding: .day, value: i, to: calendar.startOfDay(for: date(2026, 3, 1)))!
+        let dayDate = calendar.startOfDay(for: day.wrappedDate)
+        #expect(dayDate == expected)
+    }
+}
+
+@Test func deleteTripCascades() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Cascade Test",
+        destination: "Test",
+        startDate: date(2026, 4, 1),
+        endDate: date(2026, 4, 3)
+    )
+    let day = trip.daysArray.first!
+    manager.addStop(to: day, name: "Stop", latitude: 0, longitude: 0, category: .other)
+
+    let booking = BookingEntity.create(in: context, type: .hotel, title: "Hotel")
+    booking.trip = trip
+    let list = TripListEntity.create(in: context, name: "List")
+    list.trip = trip
+    manager.addExpense(to: trip, title: "Taxi", amount: 20)
+    try? context.save()
+
+    manager.deleteTrip(trip)
+
+    let trips = manager.fetchTrips()
+    #expect(trips.isEmpty)
+
+    // Verify cascade: no orphaned entities
+    let dayReq = DayEntity.fetchRequest() as! NSFetchRequest<DayEntity>
+    let dayCount = (try? context.count(for: dayReq)) ?? -1
+    #expect(dayCount == 0)
+
+    let stopReq = StopEntity.fetchRequest() as! NSFetchRequest<StopEntity>
+    let stopCount = (try? context.count(for: stopReq)) ?? -1
+    #expect(stopCount == 0)
+}
+
+@Test func addStopToDay() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Add Stop Test",
+        destination: "Test",
+        startDate: date(2026, 5, 1),
+        endDate: date(2026, 5, 2)
+    )
+    let day = trip.daysArray.first!
+    let beforeUpdate = trip.updatedAt
+
+    let stop = manager.addStop(
+        to: day,
+        name: "Museum",
+        latitude: 48.8606,
+        longitude: 2.3376,
+        category: .attraction,
+        notes: "Buy tickets"
+    )
+
+    #expect(stop.wrappedName == "Museum")
+    #expect(stop.day === day)
+    #expect(day.stopsArray.count == 1)
+    #expect(stop.sortOrder == 0)
+    #expect(trip.updatedAt != beforeUpdate)
+}
+
+@Test func deleteStop() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Del Stop Test",
+        destination: "Test",
+        startDate: date(2026, 5, 1),
+        endDate: date(2026, 5, 2)
+    )
+    let day = trip.daysArray.first!
+    manager.addStop(to: day, name: "A", latitude: 0, longitude: 0, category: .other)
+    let middle = manager.addStop(to: day, name: "B", latitude: 0, longitude: 0, category: .other)
+    manager.addStop(to: day, name: "C", latitude: 0, longitude: 0, category: .other)
+
+    #expect(day.stopsArray.count == 3)
+
+    manager.deleteStop(middle)
+
+    // Verify via fetch request (relationship caches can be stale after delete+save)
+    let req = StopEntity.fetchRequest() as! NSFetchRequest<StopEntity>
+    req.predicate = NSPredicate(format: "day == %@", day)
+    let remaining = (try? context.fetch(req)) ?? []
+    #expect(remaining.count == 2)
+    let names = remaining.map(\.wrappedName).sorted()
+    #expect(names == ["A", "C"])
+}
+
+@Test func toggleVisited() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Toggle Test",
+        destination: "Test",
+        startDate: date(2026, 5, 1),
+        endDate: date(2026, 5, 2)
+    )
+    let day = trip.daysArray.first!
+    let stop = manager.addStop(to: day, name: "Stop", latitude: 0, longitude: 0, category: .other)
+
+    #expect(stop.isVisited == false)
+    #expect(stop.visitedAt == nil)
+
+    manager.toggleVisited(stop)
+    #expect(stop.isVisited == true)
+    #expect(stop.visitedAt != nil)
+
+    manager.toggleVisited(stop)
+    #expect(stop.isVisited == false)
+    #expect(stop.visitedAt == nil)
+}
+
+@Test func moveStopBetweenDays() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Move Test",
+        destination: "Test",
+        startDate: date(2026, 5, 1),
+        endDate: date(2026, 5, 3)
+    )
+    let days = trip.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+    let stop = manager.addStop(to: days[0], name: "Movable", latitude: 0, longitude: 0, category: .other)
+
+    #expect(days[0].stopsArray.count == 1)
+    #expect(days[1].stopsArray.count == 0)
+
+    manager.moveStop(stop, to: days[1])
+
+    #expect(days[0].stopsArray.count == 0)
+    #expect(days[1].stopsArray.count == 1)
+    #expect(stop.day === days[1])
+}
+
+@Test func reorderStops() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Reorder Test",
+        destination: "Test",
+        startDate: date(2026, 5, 1),
+        endDate: date(2026, 5, 2)
+    )
+    let day = trip.daysArray.first!
+    manager.addStop(to: day, name: "A", latitude: 0, longitude: 0, category: .other)
+    manager.addStop(to: day, name: "B", latitude: 0, longitude: 0, category: .other)
+    manager.addStop(to: day, name: "C", latitude: 0, longitude: 0, category: .other)
+
+    // Move index 1 (B) to front (index 0)
+    manager.reorderStops(in: day, from: IndexSet(integer: 1), to: 0)
+
+    let stops = day.stopsArray
+    #expect(stops.count == 3)
+    #expect(stops[0].wrappedName == "B")
+    #expect(stops[1].wrappedName == "A")
+    #expect(stops[2].wrappedName == "C")
+    #expect(stops[0].sortOrder == 0)
+    #expect(stops[1].sortOrder == 1)
+    #expect(stops[2].sortOrder == 2)
+}
+
+@Test func addAndDeleteExpense() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Expense Test",
+        destination: "Test",
+        startDate: date(2026, 5, 1),
+        endDate: date(2026, 5, 2)
+    )
+    trip.budgetCurrencyCode = "EUR"
+    try? context.save()
+
+    let expense = manager.addExpense(to: trip, title: "Dinner", amount: 45.50, category: .food)
+    #expect(trip.expensesArray.count == 1)
+    #expect(expense.wrappedTitle == "Dinner")
+    #expect(expense.amount == 45.50)
+    #expect(expense.wrappedCurrencyCode == "EUR")
+    #expect(expense.category == .food)
+
+    manager.deleteExpense(expense)
+    #expect(trip.expensesArray.count == 0)
+}
+
+// MARK: - 5. daysWithStopsOutsideRange
+
+@Test func daysWithStopsOutsideRangeCountsCorrectly() {
+    let context = makeTestContext()
+    let (trip, days) = makeTripWithDays(in: context, start: date(2026, 6, 1), end: date(2026, 6, 5))
+    let manager = DataManager(context: context)
+
+    // Add stops to days 1, 3, 5
+    manager.addStop(to: days[0], name: "S1", latitude: 0, longitude: 0, category: .other)
+    manager.addStop(to: days[2], name: "S3", latitude: 0, longitude: 0, category: .other)
+    manager.addStop(to: days[4], name: "S5", latitude: 0, longitude: 0, category: .other)
+
+    // Shrink to days 2-4: days 1 and 5 have stops outside range
+    let count = manager.daysWithStopsOutsideRange(
+        for: trip,
+        newStart: date(2026, 6, 2),
+        newEnd: date(2026, 6, 4)
+    )
+    #expect(count == 2)
+}
+
+@Test func daysWithStopsOutsideRangeZeroWhenAllInRange() {
+    let context = makeTestContext()
+    let (trip, days) = makeTripWithDays(in: context, start: date(2026, 6, 1), end: date(2026, 6, 5))
+    let manager = DataManager(context: context)
+
+    manager.addStop(to: days[1], name: "S2", latitude: 0, longitude: 0, category: .other)
+    manager.addStop(to: days[3], name: "S4", latitude: 0, longitude: 0, category: .other)
+
+    let count = manager.daysWithStopsOutsideRange(
+        for: trip,
+        newStart: date(2026, 6, 1),
+        newEnd: date(2026, 6, 5)
+    )
+    #expect(count == 0)
+}
+
+// MARK: - 6. WeatherService Static Helpers
+
+@Test func weatherIconMappings() {
+    #expect(WeatherService.weatherIcon(for: 0) == "sun.max.fill")
+    #expect(WeatherService.weatherIcon(for: 1) == "cloud.sun.fill")
+    #expect(WeatherService.weatherIcon(for: 2) == "cloud.sun.fill")
+    #expect(WeatherService.weatherIcon(for: 3) == "cloud.fill")
+    #expect(WeatherService.weatherIcon(for: 45) == "cloud.fog.fill")
+    #expect(WeatherService.weatherIcon(for: 48) == "cloud.fog.fill")
+    #expect(WeatherService.weatherIcon(for: 51) == "cloud.drizzle.fill")
+    #expect(WeatherService.weatherIcon(for: 61) == "cloud.rain.fill")
+    #expect(WeatherService.weatherIcon(for: 71) == "cloud.snow.fill")
+    #expect(WeatherService.weatherIcon(for: 77) == "snowflake")
+    #expect(WeatherService.weatherIcon(for: 80) == "cloud.heavyrain.fill")
+    #expect(WeatherService.weatherIcon(for: 95) == "cloud.bolt.fill")
+    #expect(WeatherService.weatherIcon(for: 96) == "cloud.bolt.rain.fill")
+    #expect(WeatherService.weatherIcon(for: 999) == "cloud.fill")
+}
+
+@Test func weatherDescriptionMappings() {
+    #expect(WeatherService.weatherDescription(for: 0) == "Clear")
+    #expect(WeatherService.weatherDescription(for: 1) == "Mostly Clear")
+    #expect(WeatherService.weatherDescription(for: 3) == "Overcast")
+    #expect(WeatherService.weatherDescription(for: 65) == "Heavy Rain")
+    #expect(WeatherService.weatherDescription(for: 75) == "Heavy Snow")
+    #expect(WeatherService.weatherDescription(for: 95) == "Thunderstorm")
+    #expect(WeatherService.weatherDescription(for: 96) == "Hail Storm")
+    #expect(WeatherService.weatherDescription(for: 999) == "Unknown")
+}
+
+@Test func weatherColorMappings() {
+    #expect(WeatherService.weatherColor(for: 0) == "yellow")
+    #expect(WeatherService.weatherColor(for: 1) == "orange")
+    #expect(WeatherService.weatherColor(for: 3) == "gray")
+    #expect(WeatherService.weatherColor(for: 61) == "blue")
+    #expect(WeatherService.weatherColor(for: 71) == "cyan")
+    #expect(WeatherService.weatherColor(for: 95) == "purple")
+    #expect(WeatherService.weatherColor(for: 999) == "gray")
+}
+
+// MARK: - 7. TripTextExporter
+
+@Test func textExporterBasicStructure() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Text Export Trip",
+        destination: "Barcelona",
+        startDate: date(2026, 9, 1),
+        endDate: date(2026, 9, 2)
+    )
+    let days = trip.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+    manager.addStop(to: days[0], name: "Sagrada Familia", latitude: 41.4036, longitude: 2.1744, category: .attraction)
+    manager.addStop(to: days[0], name: "La Rambla", latitude: 41.3809, longitude: 2.1734, category: .activity)
+    manager.addStop(to: days[1], name: "Park Güell", latitude: 41.4145, longitude: 2.1527, category: .attraction)
+
+    let text = TripTextExporter.generateText(for: trip)
+
+    #expect(text.contains("TEXT EXPORT TRIP"))
+    #expect(text.contains("Barcelona"))
+    #expect(text.contains("DAY 1"))
+    #expect(text.contains("DAY 2"))
+    #expect(text.contains("Sagrada Familia"))
+    #expect(text.contains("La Rambla"))
+    #expect(text.contains("Park Güell"))
+    #expect(text.contains("Shared from TripWit"))
+}
+
+@Test func textExporterIncludesBookings() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Booking Export",
+        destination: "Rome",
+        startDate: date(2026, 10, 1),
+        endDate: date(2026, 10, 3)
+    )
+    let booking = BookingEntity.create(in: context, type: .flight, title: "ITA 567", confirmationCode: "ITA-CONF-123")
+    booking.trip = trip
+    try? context.save()
+
+    let text = TripTextExporter.generateText(for: trip)
+    #expect(text.contains("FLIGHTS & HOTELS"))
+    #expect(text.contains("ITA-CONF-123"))
+}
+
+@Test func textExporterEmptyDaysSayNoStops() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(
+        name: "Empty Day",
+        destination: "Test",
+        startDate: date(2026, 11, 1),
+        endDate: date(2026, 11, 1)
+    )
+    _ = trip // single day, no stops
+
+    let text = TripTextExporter.generateText(for: trip)
+    #expect(text.contains("No stops planned"))
+}
+
+// MARK: - 8. Entity Computed Properties
+
+@Test func tripIsActive() {
+    let context = makeTestContext()
+    let yesterday = calendar.date(byAdding: .day, value: -1, to: Date())!
+    let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date())!
+    let trip = TripEntity.create(
+        in: context,
+        name: "Active Trip",
+        destination: "Test",
+        startDate: yesterday,
+        endDate: tomorrow,
+        status: .active
+    )
+    #expect(trip.isActive == true)
+    #expect(trip.isPast == false)
+    #expect(trip.isFuture == false)
+}
+
+@Test func tripIsPast() {
+    let context = makeTestContext()
+    let trip = TripEntity.create(
+        in: context,
+        name: "Past Trip",
+        destination: "Test",
+        startDate: date(2025, 1, 1),
+        endDate: date(2025, 1, 5)
+    )
+    #expect(trip.isPast == true)
+    #expect(trip.isActive == false)
+    #expect(trip.isFuture == false)
+}
+
+@Test func tripIsFuture() {
+    let context = makeTestContext()
+    let trip = TripEntity.create(
+        in: context,
+        name: "Future Trip",
+        destination: "Test",
+        startDate: date(2027, 12, 1),
+        endDate: date(2027, 12, 10)
+    )
+    #expect(trip.isFuture == true)
+    #expect(trip.isActive == false)
+    #expect(trip.isPast == false)
+}
+
+@Test func bookingTypeRoundTrip() {
+    let context = makeTestContext()
+    let booking = BookingEntity.create(in: context, type: .flight, title: "Test Flight")
+    #expect(booking.bookingType == .flight)
+    #expect(booking.typeRaw == "flight")
+
+    booking.bookingType = .hotel
+    #expect(booking.typeRaw == "hotel")
+
+    booking.bookingType = .carRental
+    #expect(booking.typeRaw == "car_rental")
+}
+
+@Test func expenseCategoryRoundTrip() {
+    let context = makeTestContext()
+    let expense = ExpenseEntity.create(in: context, title: "Lunch", amount: 20, category: .food)
+    #expect(expense.category == .food)
+    #expect(expense.categoryRaw == "food")
+
+    expense.category = .transport
+    #expect(expense.categoryRaw == "transport")
+}
+
+@Test func tripListItemsArraySorted() {
+    let context = makeTestContext()
+    let list = TripListEntity.create(in: context, name: "Test List")
+
+    let item3 = TripListItemEntity.create(in: context, text: "Third", sortOrder: 2)
+    item3.list = list
+    let item1 = TripListItemEntity.create(in: context, text: "First", sortOrder: 0)
+    item1.list = list
+    let item2 = TripListItemEntity.create(in: context, text: "Second", sortOrder: 1)
+    item2.list = list
+
+    let items = list.itemsArray
+    #expect(items.count == 3)
+    #expect(items[0].wrappedText == "First")
+    #expect(items[1].wrappedText == "Second")
+    #expect(items[2].wrappedText == "Third")
+}
+
+} // end TripWitTests suite
