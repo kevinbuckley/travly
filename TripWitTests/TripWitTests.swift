@@ -1699,7 +1699,31 @@ private func makeTripWithDays(
     #expect(DataManager.completionScore(for: trip) == 1.0)
 }
 
-// MARK: - 14. Trip Statistics
+// MARK: - 14. Move Stop Between Days (sort order)
+
+@Test func moveStopToPopulatedDayGetsCorrectSortOrder() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Move Test", destination: "Test", startDate: date(2026, 4, 1), endDate: date(2026, 4, 2))
+    let days = trip.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+
+    // Day 1: one stop
+    let stopA = manager.addStop(to: days[0], name: "A", latitude: 0, longitude: 0, category: .other)
+
+    // Day 2: two stops
+    manager.addStop(to: days[1], name: "B", latitude: 0, longitude: 0, category: .other)
+    manager.addStop(to: days[1], name: "C", latitude: 0, longitude: 0, category: .other)
+
+    // Move A to day 2 — should get sortOrder 2 (appended)
+    manager.moveStop(stopA, to: days[1])
+
+    #expect(stopA.day == days[1])
+    #expect(stopA.sortOrder == 2)
+    #expect(days[0].stopsArray.isEmpty)
+    #expect(days[1].stopsArray.count == 3)
+}
+
+// MARK: - 15. Trip Statistics
 
 @Test func tripStatisticsBasic() {
     let context = makeTestContext()
