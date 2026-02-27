@@ -7,18 +7,24 @@ import TripCore
 
 // MARK: - Helpers
 
-/// Holds references to controllers to prevent premature deallocation.
-/// When a controller is deallocated, Core Data checkpoints the store and
-/// may crash on dangling relationship references from cascade deletes.
-private var _liveControllers: [PersistenceController] = []
+/// Keeps containers alive for the duration of the test process.
+/// In-memory stores don't checkpoint on dealloc (unlike /dev/null SQLite),
+/// so accumulating them here is safe — no crash on process exit.
+private var _liveContainers: [NSPersistentContainer] = []
 
 /// Creates an in-memory Core Data context for testing.
-/// PersistenceController detects the test environment and uses a plain
-/// NSPersistentContainer (not CloudKit) to avoid entity registration conflicts.
+/// Uses NSInMemoryStoreType to avoid SQLite checkpoint crashes.
 private func makeTestContext() -> NSManagedObjectContext {
-    let controller = PersistenceController(inMemory: true)
-    _liveControllers.append(controller)
-    return controller.viewContext
+    let container = NSPersistentContainer(name: "TripWit")
+    let desc = NSPersistentStoreDescription()
+    desc.type = NSInMemoryStoreType
+    container.persistentStoreDescriptions = [desc]
+    container.loadPersistentStores { _, error in
+        if let error { fatalError("Test store failed: \(error)") }
+    }
+    container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+    _liveContainers.append(container)
+    return container.viewContext
 }
 
 private let calendar = Calendar.current
@@ -1162,6 +1168,133 @@ private func makeTripWithDays(
     #expect(items[0].wrappedText == "First")
     #expect(items[1].wrappedText == "Second")
     #expect(items[2].wrappedText == "Third")
+}
+
+// MARK: - 9. Input Validation
+
+@Test func validateTripRejectsEmptyName() {
+    #expect(throws: ValidationError.emptyTripName) {
+        try DataManager.validateTrip(name: "", destination: "Paris", startDate: date(2026, 6, 1), endDate: date(2026, 6, 5))
+    }
+    #expect(throws: ValidationError.emptyTripName) {
+        try DataManager.validateTrip(name: "   ", destination: "Paris", startDate: date(2026, 6, 1), endDate: date(2026, 6, 5))
+    }
+}
+
+@Test func validateTripRejectsEmptyDestination() {
+    #expect(throws: ValidationError.emptyDestination) {
+        try DataManager.validateTrip(name: "Trip", destination: "", startDate: date(2026, 6, 1), endDate: date(2026, 6, 5))
+    }
+}
+
+@Test func validateTripRejectsEndBeforeStart() {
+    #expect(throws: ValidationError.endDateBeforeStartDate) {
+        try DataManager.validateTrip(name: "Trip", destination: "Paris", startDate: date(2026, 6, 5), endDate: date(2026, 6, 1))
+    }
+}
+
+@Test func validateTripAcceptsSameDay() throws {
+    try DataManager.validateTrip(name: "Day Trip", destination: "Nearby", startDate: date(2026, 6, 1), endDate: date(2026, 6, 1))
+}
+
+@Test func validateTripAcceptsValidInput() throws {
+    try DataManager.validateTrip(name: "Paris", destination: "France", startDate: date(2026, 6, 1), endDate: date(2026, 6, 10))
+}
+
+@Test func validateStopRejectsEmptyName() {
+    #expect(throws: ValidationError.emptyStopName) {
+        try DataManager.validateStop(name: "")
+    }
+    #expect(throws: ValidationError.emptyStopName) {
+        try DataManager.validateStop(name: "  \n  ")
+    }
+}
+
+@Test func validateStopRejectsDepartureBeforeArrival() {
+    let arrival = date(2026, 6, 1)
+    let departure = date(2026, 5, 31)
+    #expect(throws: ValidationError.departureBeforeArrival) {
+        try DataManager.validateStop(name: "Stop", arrivalTime: arrival, departureTime: departure)
+    }
+}
+
+@Test func validateStopAcceptsNilTimes() throws {
+    try DataManager.validateStop(name: "Stop", arrivalTime: nil, departureTime: nil)
+    try DataManager.validateStop(name: "Stop", arrivalTime: date(2026, 6, 1), departureTime: nil)
+}
+
+@Test func validateExpenseRejectsEmptyTitle() {
+    #expect(throws: ValidationError.emptyExpenseTitle) {
+        try DataManager.validateExpense(title: "", amount: 10)
+    }
+}
+
+@Test func validateExpenseRejectsNegativeAmount() {
+    #expect(throws: ValidationError.negativeExpenseAmount) {
+        try DataManager.validateExpense(title: "Taxi", amount: -5.0)
+    }
+}
+
+@Test func validateExpenseAcceptsZeroAmount() throws {
+    try DataManager.validateExpense(title: "Free entry", amount: 0)
+}
+
+@Test func validateBookingRejectsEmptyTitle() {
+    #expect(throws: ValidationError.emptyBookingTitle) {
+        try DataManager.validateBooking(title: "")
+    }
+}
+
+@Test func validateBookingRejectsArrivalBeforeDeparture() {
+    let dep = date(2026, 6, 5)
+    let arr = date(2026, 6, 1)
+    #expect(throws: ValidationError.bookingArrivalBeforeDeparture) {
+        try DataManager.validateBooking(title: "Flight", departureTime: dep, arrivalTime: arr)
+    }
+}
+
+@Test func createValidatedTripWorks() throws {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = try manager.createValidatedTrip(
+        name: "Valid Trip",
+        destination: "Tokyo",
+        startDate: date(2026, 7, 1),
+        endDate: date(2026, 7, 5)
+    )
+    #expect(trip.wrappedName == "Valid Trip")
+    #expect(trip.daysArray.count == 5)
+}
+
+@Test func createValidatedTripRejectsInvalid() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    #expect(throws: ValidationError.emptyTripName) {
+        try manager.createValidatedTrip(name: "", destination: "Tokyo", startDate: date(2026, 7, 1), endDate: date(2026, 7, 5))
+    }
+    // Verify no trip was created
+    #expect(manager.fetchTrips().isEmpty)
+}
+
+@Test func addValidatedStopRejectsEmptyName() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Test", destination: "Test", startDate: date(2026, 7, 1), endDate: date(2026, 7, 2))
+    let day = trip.daysArray.first!
+    #expect(throws: ValidationError.emptyStopName) {
+        try manager.addValidatedStop(to: day, name: "", latitude: 0, longitude: 0, category: .other)
+    }
+    #expect(day.stopsArray.isEmpty)
+}
+
+@Test func addValidatedExpenseRejectsNegative() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Test", destination: "Test", startDate: date(2026, 7, 1), endDate: date(2026, 7, 2))
+    #expect(throws: ValidationError.negativeExpenseAmount) {
+        try manager.addValidatedExpense(to: trip, title: "Bad", amount: -10)
+    }
+    #expect(trip.expensesArray.isEmpty)
 }
 
 } // end TripWitTests suite

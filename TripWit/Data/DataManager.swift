@@ -3,6 +3,34 @@ import SwiftUI
 import Foundation
 import TripCore
 
+// MARK: - Validation
+
+enum ValidationError: LocalizedError, Equatable {
+    case emptyTripName
+    case emptyDestination
+    case endDateBeforeStartDate
+    case emptyStopName
+    case departureBeforeArrival
+    case emptyExpenseTitle
+    case negativeExpenseAmount
+    case emptyBookingTitle
+    case bookingArrivalBeforeDeparture
+
+    var errorDescription: String? {
+        switch self {
+        case .emptyTripName: "Trip name cannot be empty"
+        case .emptyDestination: "Destination cannot be empty"
+        case .endDateBeforeStartDate: "End date must be on or after start date"
+        case .emptyStopName: "Stop name cannot be empty"
+        case .departureBeforeArrival: "Departure time must be after arrival time"
+        case .emptyExpenseTitle: "Expense title cannot be empty"
+        case .negativeExpenseAmount: "Expense amount cannot be negative"
+        case .emptyBookingTitle: "Booking title cannot be empty"
+        case .bookingArrivalBeforeDeparture: "Arrival time must be after departure time"
+        }
+    }
+}
+
 @Observable
 final class DataManager {
 
@@ -10,6 +38,83 @@ final class DataManager {
 
     init(context: NSManagedObjectContext) {
         self.context = context
+    }
+
+    // MARK: - Validation Helpers
+
+    static func validateTrip(name: String, destination: String, startDate: Date, endDate: Date) throws {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDest = destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedName.isEmpty { throw ValidationError.emptyTripName }
+        if trimmedDest.isEmpty { throw ValidationError.emptyDestination }
+        let calendar = Calendar.current
+        let startDay = calendar.startOfDay(for: startDate)
+        let endDay = calendar.startOfDay(for: endDate)
+        if endDay < startDay { throw ValidationError.endDateBeforeStartDate }
+    }
+
+    static func validateStop(name: String, arrivalTime: Date? = nil, departureTime: Date? = nil) throws {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { throw ValidationError.emptyStopName }
+        if let arrival = arrivalTime, let departure = departureTime, departure <= arrival {
+            throw ValidationError.departureBeforeArrival
+        }
+    }
+
+    static func validateExpense(title: String, amount: Double) throws {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { throw ValidationError.emptyExpenseTitle }
+        if amount < 0 { throw ValidationError.negativeExpenseAmount }
+    }
+
+    static func validateBooking(title: String, departureTime: Date? = nil, arrivalTime: Date? = nil) throws {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { throw ValidationError.emptyBookingTitle }
+        if let dep = departureTime, let arr = arrivalTime, arr <= dep {
+            throw ValidationError.bookingArrivalBeforeDeparture
+        }
+    }
+
+    // MARK: - Validated Create Methods
+
+    @discardableResult
+    func createValidatedTrip(
+        name: String,
+        destination: String,
+        startDate: Date,
+        endDate: Date,
+        notes: String = ""
+    ) throws -> TripEntity {
+        try Self.validateTrip(name: name, destination: destination, startDate: startDate, endDate: endDate)
+        return createTrip(name: name, destination: destination, startDate: startDate, endDate: endDate, notes: notes)
+    }
+
+    @discardableResult
+    func addValidatedStop(
+        to day: DayEntity,
+        name: String,
+        latitude: Double,
+        longitude: Double,
+        category: StopCategory,
+        arrivalTime: Date? = nil,
+        departureTime: Date? = nil,
+        notes: String = ""
+    ) throws -> StopEntity {
+        try Self.validateStop(name: name, arrivalTime: arrivalTime, departureTime: departureTime)
+        return addStop(to: day, name: name, latitude: latitude, longitude: longitude, category: category, notes: notes)
+    }
+
+    @discardableResult
+    func addValidatedExpense(
+        to trip: TripEntity,
+        title: String,
+        amount: Double,
+        category: ExpenseCategory = .other,
+        date: Date = Date(),
+        notes: String = ""
+    ) throws -> ExpenseEntity {
+        try Self.validateExpense(title: title, amount: amount)
+        return addExpense(to: trip, title: title, amount: amount, category: category, date: date, notes: notes)
     }
 
     // MARK: - Trips
