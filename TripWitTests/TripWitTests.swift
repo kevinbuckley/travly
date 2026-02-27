@@ -1473,4 +1473,72 @@ private func makeTripWithDays(
     #expect(clone.daysArray.first!.stopsArray.first?.wrappedName == "Original Stop")
 }
 
+// MARK: - 11. CSV Expense Export
+
+@Test func csvExportHeader() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "CSV Test", destination: "Test", startDate: date(2026, 6, 1), endDate: date(2026, 6, 2))
+
+    let csv = DataManager.exportExpensesCSV(for: trip)
+    let lines = csv.components(separatedBy: "\n")
+    #expect(lines.first == "Title,Amount,Currency,Category,Date,Notes")
+}
+
+@Test func csvExportWithExpenses() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Expense CSV", destination: "Paris", startDate: date(2026, 6, 1), endDate: date(2026, 6, 3))
+    trip.budgetCurrencyCode = "EUR"
+    try? context.save()
+
+    manager.addExpense(to: trip, title: "Dinner", amount: 45.50, category: .food, date: date(2026, 6, 1), notes: "Le Marais")
+    manager.addExpense(to: trip, title: "Metro Pass", amount: 16.90, category: .transport, date: date(2026, 6, 1))
+
+    let csv = DataManager.exportExpensesCSV(for: trip)
+    let lines = csv.components(separatedBy: "\n")
+
+    // Header + 2 expenses + blank line + total = 5 lines
+    #expect(lines.count == 5)
+    #expect(lines[1].contains("Dinner"))
+    #expect(lines[1].contains("45.50"))
+    #expect(lines[1].contains("EUR"))
+    #expect(lines[1].contains("Le Marais"))
+    #expect(lines[2].contains("Metro Pass"))
+    #expect(lines[2].contains("16.90"))
+
+    // Total row
+    #expect(lines[4].contains("Total"))
+    #expect(lines[4].contains("62.40"))
+}
+
+@Test func csvExportEscapesSpecialCharacters() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Escape CSV", destination: "Test", startDate: date(2026, 7, 1), endDate: date(2026, 7, 2))
+    trip.budgetCurrencyCode = "USD"
+    try? context.save()
+
+    manager.addExpense(to: trip, title: "Hotel, Room 101", amount: 200, notes: "Check-in \"early\"")
+
+    let csv = DataManager.exportExpensesCSV(for: trip)
+    // Title with comma should be quoted
+    #expect(csv.contains("\"Hotel, Room 101\""))
+    // Notes with quotes should be escaped
+    #expect(csv.contains("\"Check-in \"\"early\"\"\""))
+}
+
+@Test func csvExportEmptyTrip() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Empty", destination: "Test", startDate: date(2026, 8, 1), endDate: date(2026, 8, 2))
+
+    let csv = DataManager.exportExpensesCSV(for: trip)
+    let lines = csv.components(separatedBy: "\n")
+    // Header + blank + total = 3 lines
+    #expect(lines.count == 3)
+    #expect(lines[2].contains("Total"))
+    #expect(lines[2].contains("0.00"))
+}
+
 } // end TripWitTests suite

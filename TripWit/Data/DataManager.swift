@@ -455,6 +455,45 @@ final class DataManager {
         return clone
     }
 
+    // MARK: - CSV Export
+
+    /// Generates CSV data for a trip's expenses.
+    /// Columns: Title, Amount, Currency, Category, Date, Notes
+    static func exportExpensesCSV(for trip: TripEntity) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .short
+        dateFormatter.timeStyle = .none
+
+        var lines: [String] = ["Title,Amount,Currency,Category,Date,Notes"]
+
+        let expenses = trip.expensesArray
+        for expense in expenses {
+            let title = csvEscape(expense.wrappedTitle)
+            let amount = String(format: "%.2f", expense.amount)
+            let currency = csvEscape(expense.wrappedCurrencyCode)
+            let category = csvEscape(expense.category.label)
+            let dateStr = csvEscape(dateFormatter.string(from: expense.wrappedDateIncurred))
+            let notes = csvEscape(expense.wrappedNotes)
+            lines.append("\(title),\(amount),\(currency),\(category),\(dateStr),\(notes)")
+        }
+
+        // Summary row
+        let total = expenses.reduce(0.0) { $0 + $1.amount }
+        let currencyCode = trip.budgetCurrencyCode ?? "USD"
+        lines.append("")
+        lines.append("Total,\(String(format: "%.2f", total)),\(csvEscape(currencyCode)),,,")
+
+        return lines.joined(separator: "\n")
+    }
+
+    private static func csvEscape(_ value: String) -> String {
+        let needsQuoting = value.contains(",") || value.contains("\"") || value.contains("\n")
+        if needsQuoting {
+            return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
+        }
+        return value
+    }
+
     // MARK: - Sample Data
 
     func loadSampleDataIfEmpty() {
