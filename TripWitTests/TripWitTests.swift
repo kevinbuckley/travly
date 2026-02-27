@@ -1699,7 +1699,86 @@ private func makeTripWithDays(
     #expect(DataManager.completionScore(for: trip) == 1.0)
 }
 
-// MARK: - 14. Move Stop Between Days (sort order)
+// MARK: - 14. Batch Mark Stops as Visited
+
+@Test func batchSetVisitedMarksAll() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Batch", destination: "Test", startDate: date(2026, 3, 1), endDate: date(2026, 3, 1))
+    let day = trip.daysArray.first!
+
+    let s1 = manager.addStop(to: day, name: "A", latitude: 0, longitude: 0, category: .other)
+    let s2 = manager.addStop(to: day, name: "B", latitude: 0, longitude: 0, category: .other)
+    let s3 = manager.addStop(to: day, name: "C", latitude: 0, longitude: 0, category: .other)
+
+    manager.batchSetVisited([s1, s2, s3], visited: true)
+
+    #expect(s1.isVisited == true)
+    #expect(s2.isVisited == true)
+    #expect(s3.isVisited == true)
+    #expect(s1.visitedAt != nil)
+    #expect(s2.visitedAt != nil)
+    #expect(s3.visitedAt != nil)
+}
+
+@Test func batchSetVisitedUnmarksAll() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Batch", destination: "Test", startDate: date(2026, 3, 2), endDate: date(2026, 3, 2))
+    let day = trip.daysArray.first!
+
+    let s1 = manager.addStop(to: day, name: "A", latitude: 0, longitude: 0, category: .other)
+    let s2 = manager.addStop(to: day, name: "B", latitude: 0, longitude: 0, category: .other)
+
+    // First mark visited
+    manager.batchSetVisited([s1, s2], visited: true)
+    #expect(s1.isVisited == true)
+
+    // Then unmark
+    manager.batchSetVisited([s1, s2], visited: false)
+    #expect(s1.isVisited == false)
+    #expect(s2.isVisited == false)
+    #expect(s1.visitedAt == nil)
+    #expect(s2.visitedAt == nil)
+}
+
+@Test func batchSetDayVisited() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Day Batch", destination: "Test", startDate: date(2026, 3, 3), endDate: date(2026, 3, 4))
+    let days = trip.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+
+    let s1 = manager.addStop(to: days[0], name: "A", latitude: 0, longitude: 0, category: .other)
+    let s2 = manager.addStop(to: days[0], name: "B", latitude: 0, longitude: 0, category: .other)
+    let s3 = manager.addStop(to: days[1], name: "C", latitude: 0, longitude: 0, category: .other)
+
+    // Mark day 1 as visited — only day 1 stops affected
+    manager.batchSetDayVisited(days[0], visited: true)
+
+    #expect(s1.isVisited == true)
+    #expect(s2.isVisited == true)
+    #expect(s3.isVisited == false) // day 2 stop unaffected
+}
+
+@Test func batchSetVisitedPartialSelection() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Partial", destination: "Test", startDate: date(2026, 3, 5), endDate: date(2026, 3, 5))
+    let day = trip.daysArray.first!
+
+    let s1 = manager.addStop(to: day, name: "A", latitude: 0, longitude: 0, category: .other)
+    let s2 = manager.addStop(to: day, name: "B", latitude: 0, longitude: 0, category: .other)
+    let s3 = manager.addStop(to: day, name: "C", latitude: 0, longitude: 0, category: .other)
+
+    // Only mark first two
+    manager.batchSetVisited([s1, s2], visited: true)
+
+    #expect(s1.isVisited == true)
+    #expect(s2.isVisited == true)
+    #expect(s3.isVisited == false)
+}
+
+// MARK: - 15. Move Stop Between Days (sort order)
 
 @Test func moveStopToPopulatedDayGetsCorrectSortOrder() {
     let context = makeTestContext()

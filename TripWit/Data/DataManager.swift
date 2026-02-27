@@ -297,6 +297,22 @@ final class DataManager {
         try? context.save()
     }
 
+    /// Batch mark multiple stops as visited or not visited.
+    func batchSetVisited(_ stops: [StopEntity], visited: Bool) {
+        let now = Date()
+        for stop in stops {
+            stop.isVisited = visited
+            stop.visitedAt = visited ? now : nil
+        }
+        stops.first?.day?.trip?.updatedAt = now
+        try? context.save()
+    }
+
+    /// Mark all stops on a given day as visited or not visited.
+    func batchSetDayVisited(_ day: DayEntity, visited: Bool) {
+        batchSetVisited(day.stopsArray, visited: visited)
+    }
+
     func moveStop(_ stop: StopEntity, to targetDay: DayEntity) {
         if let currentDay = stop.day {
             currentDay.removeFromStops(stop)
