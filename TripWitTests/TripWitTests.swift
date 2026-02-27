@@ -2160,4 +2160,124 @@ private func makeTripWithDays(
     #expect(checkedTodos.first?.wrappedText == "Print map")
 }
 
+// MARK: - 22. Notification Reminders Computation
+
+@Test func reminderTripStarting() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Paris", destination: "Paris, France", startDate: date(2026, 8, 15), endDate: date(2026, 8, 20))
+
+    // "now" is well before the trip
+    let now = date(2026, 8, 1)
+    let reminders = DataManager.computeReminders(for: trip, now: now)
+
+    let tripReminder = reminders.first(where: { $0.type == .tripStarting })
+    #expect(tripReminder != nil)
+    #expect(tripReminder!.title == "Trip tomorrow!")
+    #expect(tripReminder!.body.contains("Paris"))
+    // Should fire on Aug 14 at 9 AM
+    let fireComps = calendar.dateComponents([.year, .month, .day, .hour], from: tripReminder!.fireDate)
+    #expect(fireComps.month == 8)
+    #expect(fireComps.day == 14)
+    #expect(fireComps.hour == 9)
+}
+
+@Test func reminderFlightDeparture() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Trip", destination: "Tokyo", startDate: date(2026, 9, 1), endDate: date(2026, 9, 7))
+
+    let depTime = calendar.date(from: DateComponents(year: 2026, month: 9, day: 1, hour: 14, minute: 30))!
+    let booking = BookingEntity.create(in: context, type: .flight, title: "JL Flight 12", confirmationCode: "ABC")
+    booking.departureTime = depTime
+    booking.trip = trip
+    try? context.save()
+
+    let now = date(2026, 8, 1)
+    let reminders = DataManager.computeReminders(for: trip, now: now)
+
+    let flightReminder = reminders.first(where: { $0.type == .flightDeparture })
+    #expect(flightReminder != nil)
+    #expect(flightReminder!.body.contains("JL Flight 12"))
+    // Should fire 3 hours before: Sep 1 at 11:30
+    let fireComps = calendar.dateComponents([.hour, .minute], from: flightReminder!.fireDate)
+    #expect(fireComps.hour == 11)
+    #expect(fireComps.minute == 30)
+}
+
+@Test func reminderHotelCheckInAndOut() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Trip", destination: "Berlin", startDate: date(2026, 10, 1), endDate: date(2026, 10, 5))
+
+    let booking = BookingEntity.create(in: context, type: .hotel, title: "Grand Hotel")
+    booking.hotelName = "Grand Hotel Berlin"
+    booking.checkInDate = date(2026, 10, 1)
+    booking.checkOutDate = date(2026, 10, 5)
+    booking.trip = trip
+    try? context.save()
+
+    let now = date(2026, 9, 1)
+    let reminders = DataManager.computeReminders(for: trip, now: now)
+
+    let checkIn = reminders.first(where: { $0.type == .hotelCheckIn })
+    #expect(checkIn != nil)
+    #expect(checkIn!.body.contains("Grand Hotel Berlin"))
+    let checkInComps = calendar.dateComponents([.month, .day, .hour], from: checkIn!.fireDate)
+    #expect(checkInComps.month == 10)
+    #expect(checkInComps.day == 1)
+    #expect(checkInComps.hour == 14)
+
+    let checkOut = reminders.first(where: { $0.type == .hotelCheckOut })
+    #expect(checkOut != nil)
+    let checkOutComps = calendar.dateComponents([.month, .day, .hour], from: checkOut!.fireDate)
+    #expect(checkOutComps.month == 10)
+    #expect(checkOutComps.day == 5)
+    #expect(checkOutComps.hour == 9)
+}
+
+@Test func remindersPastEventsFiltered() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Old Trip", destination: "London", startDate: date(2025, 1, 1), endDate: date(2025, 1, 5))
+
+    let booking = BookingEntity.create(in: context, type: .flight, title: "BA 100")
+    booking.departureTime = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1, hour: 10))
+    booking.trip = trip
+    try? context.save()
+
+    // "now" is after everything
+    let now = date(2026, 1, 1)
+    let reminders = DataManager.computeReminders(for: trip, now: now)
+
+    #expect(reminders.isEmpty)
+}
+
+@Test func remindersSortedByFireDate() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Sorted", destination: "Rome", startDate: date(2026, 11, 10), endDate: date(2026, 11, 15))
+
+    // Hotel check-in on Nov 10, flight on Nov 10 at 8 AM
+    let flight = BookingEntity.create(in: context, type: .flight, title: "Flight")
+    flight.departureTime = calendar.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 8))
+    flight.trip = trip
+
+    let hotel = BookingEntity.create(in: context, type: .hotel, title: "Hotel")
+    hotel.hotelName = "Rome Hotel"
+    hotel.checkInDate = date(2026, 11, 10)
+    hotel.checkOutDate = date(2026, 11, 15)
+    hotel.trip = trip
+    try? context.save()
+
+    let now = date(2026, 10, 1)
+    let reminders = DataManager.computeReminders(for: trip, now: now)
+
+    #expect(reminders.count >= 3)
+    // Verify sorted by fireDate
+    for i in 0..<(reminders.count - 1) {
+        #expect(reminders[i].fireDate <= reminders[i + 1].fireDate)
+    }
+}
+
 } // end TripWitTests suite

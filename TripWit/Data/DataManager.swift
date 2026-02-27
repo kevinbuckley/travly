@@ -682,6 +682,95 @@ final class DataManager {
         }
     }
 
+    // MARK: - Reminder Computation
+
+    struct TripReminder: Equatable {
+        enum ReminderType: String, Equatable {
+            case tripStarting
+            case flightDeparture
+            case hotelCheckIn
+            case hotelCheckOut
+        }
+
+        var type: ReminderType
+        var title: String
+        var body: String
+        var fireDate: Date
+    }
+
+    /// Computes reminders for a trip based on its bookings and dates.
+    /// Returns reminders sorted by fireDate. Only returns future reminders
+    /// relative to the given `now` parameter.
+    static func computeReminders(for trip: TripEntity, now: Date = Date()) -> [TripReminder] {
+        var reminders: [TripReminder] = []
+        let calendar = Calendar.current
+
+        // Trip starting reminder (day before at 9 AM)
+        if let startDate = trip.startDate {
+            let dayBefore = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: startDate))!
+            var comps = calendar.dateComponents([.year, .month, .day], from: dayBefore)
+            comps.hour = 9
+            if let fireDate = calendar.date(from: comps), fireDate > now {
+                reminders.append(TripReminder(
+                    type: .tripStarting,
+                    title: "Trip tomorrow!",
+                    body: "\(trip.wrappedName) to \(trip.wrappedDestination) starts tomorrow",
+                    fireDate: fireDate
+                ))
+            }
+        }
+
+        // Booking-based reminders
+        for booking in trip.bookingsArray {
+            switch booking.bookingType {
+            case .flight:
+                if let depTime = booking.departureTime, depTime > now {
+                    // 3 hours before flight
+                    let fireDate = calendar.date(byAdding: .hour, value: -3, to: depTime)!
+                    reminders.append(TripReminder(
+                        type: .flightDeparture,
+                        title: "Flight reminder",
+                        body: "\(booking.wrappedTitle) departs in 3 hours",
+                        fireDate: fireDate
+                    ))
+                }
+
+            case .hotel:
+                if let checkIn = booking.checkInDate {
+                    // Check-in reminder at 2 PM on check-in day
+                    var comps = calendar.dateComponents([.year, .month, .day], from: checkIn)
+                    comps.hour = 14
+                    if let fireDate = calendar.date(from: comps), fireDate > now {
+                        reminders.append(TripReminder(
+                            type: .hotelCheckIn,
+                            title: "Hotel check-in",
+                            body: "Check in to \(booking.hotelName ?? booking.wrappedTitle)",
+                            fireDate: fireDate
+                        ))
+                    }
+                }
+                if let checkOut = booking.checkOutDate {
+                    // Check-out reminder at 9 AM on check-out day
+                    var comps = calendar.dateComponents([.year, .month, .day], from: checkOut)
+                    comps.hour = 9
+                    if let fireDate = calendar.date(from: comps), fireDate > now {
+                        reminders.append(TripReminder(
+                            type: .hotelCheckOut,
+                            title: "Hotel check-out",
+                            body: "Check out of \(booking.hotelName ?? booking.wrappedTitle)",
+                            fireDate: fireDate
+                        ))
+                    }
+                }
+
+            default:
+                break
+            }
+        }
+
+        return reminders.sorted { $0.fireDate < $1.fireDate }
+    }
+
     // MARK: - Sample Data
 
     func loadSampleDataIfEmpty() {
