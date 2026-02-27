@@ -350,6 +350,111 @@ final class DataManager {
         try? context.save()
     }
 
+    // MARK: - Cloning
+
+    /// Deep-clone a trip as a template. Copies all days, stops (with comments/links/todos),
+    /// bookings, lists (with items), and the budget. Resets status to `.planning`,
+    /// clears visited state on stops, and shifts dates so the clone starts on `newStartDate`.
+    @discardableResult
+    func cloneTrip(_ source: TripEntity, newStartDate: Date) -> TripEntity {
+        let calendar = Calendar.current
+        let duration = source.durationInDays
+        let newEnd = calendar.date(byAdding: .day, value: max(duration - 1, 0), to: calendar.startOfDay(for: newStartDate))!
+
+        let clone = TripEntity.create(
+            in: context,
+            name: "\(source.wrappedName) (Copy)",
+            destination: source.wrappedDestination,
+            startDate: calendar.startOfDay(for: newStartDate),
+            endDate: newEnd,
+            status: .planning,
+            notes: source.wrappedNotes
+        )
+        clone.budgetAmount = source.budgetAmount
+        clone.budgetCurrencyCode = source.budgetCurrencyCode
+        clone.hasCustomDates = source.hasCustomDates
+
+        // Clone days with stops
+        generateDays(for: clone)
+        let sourceDays = source.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+        let cloneDays = clone.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+
+        for (sourceDay, cloneDay) in zip(sourceDays, cloneDays) {
+            cloneDay.notes = sourceDay.wrappedNotes
+            cloneDay.location = sourceDay.wrappedLocation
+            cloneDay.locationLatitude = sourceDay.locationLatitude
+            cloneDay.locationLongitude = sourceDay.locationLongitude
+
+            for sourceStop in sourceDay.stopsArray {
+                let newStop = StopEntity.create(
+                    in: context,
+                    name: sourceStop.wrappedName,
+                    latitude: sourceStop.latitude,
+                    longitude: sourceStop.longitude,
+                    category: sourceStop.category,
+                    sortOrder: Int(sourceStop.sortOrder),
+                    notes: sourceStop.wrappedNotes,
+                    address: sourceStop.address,
+                    phone: sourceStop.phone,
+                    website: sourceStop.website
+                )
+                newStop.day = cloneDay
+                newStop.rating = sourceStop.rating
+
+                // Clone comments
+                for comment in sourceStop.commentsArray {
+                    let newComment = CommentEntity.create(in: context, text: comment.wrappedText)
+                    newComment.stop = newStop
+                }
+                // Clone links
+                for link in sourceStop.linksArray {
+                    let newLink = StopLinkEntity.create(in: context, title: link.wrappedTitle, url: link.wrappedURL, sortOrder: Int(link.sortOrder))
+                    newLink.stop = newStop
+                }
+                // Clone todos
+                for todo in sourceStop.todosArray {
+                    let newTodo = StopTodoEntity.create(in: context, text: todo.wrappedText, sortOrder: Int(todo.sortOrder))
+                    newTodo.isCompleted = false // Reset todos
+                    newTodo.stop = newStop
+                }
+            }
+        }
+
+        // Clone bookings
+        for sourceBooking in source.bookingsArray {
+            let newBooking = BookingEntity.create(
+                in: context,
+                type: sourceBooking.bookingType,
+                title: sourceBooking.wrappedTitle,
+                confirmationCode: "",  // Don't copy confirmation codes
+                notes: sourceBooking.wrappedNotes,
+                sortOrder: Int(sourceBooking.sortOrder)
+            )
+            newBooking.airline = sourceBooking.airline
+            newBooking.flightNumber = sourceBooking.flightNumber
+            newBooking.departureAirport = sourceBooking.departureAirport
+            newBooking.arrivalAirport = sourceBooking.arrivalAirport
+            newBooking.hotelName = sourceBooking.hotelName
+            newBooking.hotelAddress = sourceBooking.hotelAddress
+            newBooking.trip = clone
+        }
+
+        // Clone lists with items
+        for sourceList in source.listsArray {
+            let newList = TripListEntity.create(in: context, name: sourceList.wrappedName, icon: sourceList.icon ?? "list.bullet")
+            newList.sortOrder = sourceList.sortOrder
+            newList.trip = clone
+            for sourceItem in sourceList.itemsArray {
+                let newItem = TripListItemEntity.create(in: context, text: sourceItem.wrappedText, sortOrder: Int(sourceItem.sortOrder))
+                newItem.isChecked = false // Reset checklist items
+                newItem.list = newList
+            }
+        }
+
+        try? context.save()
+        return clone
+    }
+
     // MARK: - Sample Data
 
     func loadSampleDataIfEmpty() {

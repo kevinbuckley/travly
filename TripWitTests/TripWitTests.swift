@@ -1297,4 +1297,180 @@ private func makeTripWithDays(
     #expect(trip.expensesArray.isEmpty)
 }
 
+// MARK: - 10. Trip Cloning
+
+@Test func cloneTripCopiesBasicFields() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let source = manager.createTrip(
+        name: "Original Trip",
+        destination: "Tokyo, Japan",
+        startDate: date(2026, 3, 1),
+        endDate: date(2026, 3, 5),
+        notes: "Cherry blossom trip"
+    )
+    source.budgetAmount = 3000
+    source.budgetCurrencyCode = "JPY"
+    source.hasCustomDates = true
+    try? context.save()
+
+    let clone = manager.cloneTrip(source, newStartDate: date(2026, 9, 1))
+
+    #expect(clone.wrappedName == "Original Trip (Copy)")
+    #expect(clone.wrappedDestination == "Tokyo, Japan")
+    #expect(clone.wrappedNotes == "Cherry blossom trip")
+    #expect(clone.budgetAmount == 3000)
+    #expect(clone.wrappedBudgetCurrencyCode == "JPY")
+    #expect(clone.hasCustomDates == true)
+    #expect(clone.status == .planning)
+}
+
+@Test func cloneTripShiftsDates() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let source = manager.createTrip(
+        name: "5-Day Trip",
+        destination: "Test",
+        startDate: date(2026, 3, 1),
+        endDate: date(2026, 3, 5)
+    )
+
+    let clone = manager.cloneTrip(source, newStartDate: date(2026, 9, 15))
+
+    let cloneStart = calendar.startOfDay(for: clone.wrappedStartDate)
+    let cloneEnd = calendar.startOfDay(for: clone.wrappedEndDate)
+    #expect(cloneStart == date(2026, 9, 15))
+    #expect(cloneEnd == date(2026, 9, 19))
+    #expect(clone.durationInDays == 5)
+}
+
+@Test func cloneTripCopiesDaysAndStops() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let source = manager.createTrip(
+        name: "Rich Trip",
+        destination: "Paris",
+        startDate: date(2026, 4, 1),
+        endDate: date(2026, 4, 3)
+    )
+    let days = source.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+    days[0].notes = "Day 1 notes"
+    days[0].location = "Central Paris"
+    manager.addStop(to: days[0], name: "Eiffel Tower", latitude: 48.8584, longitude: 2.2945, category: .attraction, notes: "Book ahead")
+    manager.addStop(to: days[1], name: "Louvre", latitude: 48.8606, longitude: 2.3376, category: .attraction)
+
+    let clone = manager.cloneTrip(source, newStartDate: date(2026, 10, 1))
+
+    let cloneDays = clone.daysArray.sorted { $0.dayNumber < $1.dayNumber }
+    #expect(cloneDays.count == 3)
+    #expect(cloneDays[0].wrappedNotes == "Day 1 notes")
+    #expect(cloneDays[0].wrappedLocation == "Central Paris")
+    #expect(cloneDays[0].stopsArray.count == 1)
+    #expect(cloneDays[0].stopsArray.first?.wrappedName == "Eiffel Tower")
+    #expect(cloneDays[0].stopsArray.first?.wrappedNotes == "Book ahead")
+    #expect(cloneDays[1].stopsArray.count == 1)
+    #expect(cloneDays[1].stopsArray.first?.wrappedName == "Louvre")
+}
+
+@Test func cloneTripResetsVisitedAndTodos() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let source = manager.createTrip(
+        name: "Completed Trip",
+        destination: "London",
+        startDate: date(2026, 5, 1),
+        endDate: date(2026, 5, 2)
+    )
+    let day = source.daysArray.first!
+    let stop = manager.addStop(to: day, name: "Big Ben", latitude: 51.5, longitude: -0.1, category: .attraction)
+    stop.isVisited = true
+    stop.visitedAt = date(2026, 5, 1)
+    let todo = StopTodoEntity.create(in: context, text: "Take photo", sortOrder: 0)
+    todo.isCompleted = true
+    todo.stop = stop
+    try? context.save()
+
+    let clone = manager.cloneTrip(source, newStartDate: date(2026, 11, 1))
+
+    let cloneStop = clone.daysArray.first!.stopsArray.first!
+    #expect(cloneStop.isVisited == false)
+    #expect(cloneStop.visitedAt == nil)
+    #expect(cloneStop.todosArray.first?.isCompleted == false)
+}
+
+@Test func cloneTripCopiesBookingsWithoutConfirmationCode() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let source = manager.createTrip(
+        name: "Booking Trip",
+        destination: "Rome",
+        startDate: date(2026, 6, 1),
+        endDate: date(2026, 6, 3)
+    )
+    let booking = BookingEntity.create(in: context, type: .flight, title: "ITA 100", confirmationCode: "CONF-123")
+    booking.airline = "ITA Airways"
+    booking.departureAirport = "JFK"
+    booking.arrivalAirport = "FCO"
+    booking.trip = source
+    try? context.save()
+
+    let clone = manager.cloneTrip(source, newStartDate: date(2026, 12, 1))
+
+    #expect(clone.bookingsArray.count == 1)
+    let cloneBooking = clone.bookingsArray.first!
+    #expect(cloneBooking.wrappedTitle == "ITA 100")
+    #expect(cloneBooking.airline == "ITA Airways")
+    #expect(cloneBooking.departureAirport == "JFK")
+    #expect(cloneBooking.wrappedConfirmationCode == "")
+}
+
+@Test func cloneTripCopiesListsWithResetChecks() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let source = manager.createTrip(
+        name: "List Trip",
+        destination: "Test",
+        startDate: date(2026, 7, 1),
+        endDate: date(2026, 7, 2)
+    )
+    let list = TripListEntity.create(in: context, name: "Packing", icon: "suitcase.fill")
+    list.trip = source
+    let item = TripListItemEntity.create(in: context, text: "Passport")
+    item.isChecked = true
+    item.list = list
+    try? context.save()
+
+    let clone = manager.cloneTrip(source, newStartDate: date(2027, 1, 1))
+
+    #expect(clone.listsArray.count == 1)
+    let cloneList = clone.listsArray.first!
+    #expect(cloneList.wrappedName == "Packing")
+    #expect(cloneList.icon == "suitcase.fill")
+    #expect(cloneList.itemsArray.count == 1)
+    #expect(cloneList.itemsArray.first?.wrappedText == "Passport")
+    #expect(cloneList.itemsArray.first?.isChecked == false)
+}
+
+@Test func cloneTripIsIndependent() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let source = manager.createTrip(
+        name: "Independent Test",
+        destination: "Test",
+        startDate: date(2026, 8, 1),
+        endDate: date(2026, 8, 3)
+    )
+    let day = source.daysArray.first!
+    manager.addStop(to: day, name: "Original Stop", latitude: 0, longitude: 0, category: .other)
+
+    let clone = manager.cloneTrip(source, newStartDate: date(2027, 2, 1))
+
+    // Delete original — clone should be unaffected
+    manager.deleteTrip(source)
+
+    #expect(clone.daysArray.count == 3)
+    #expect(clone.daysArray.first!.stopsArray.count == 1)
+    #expect(clone.daysArray.first!.stopsArray.first?.wrappedName == "Original Stop")
+}
+
 } // end TripWitTests suite
