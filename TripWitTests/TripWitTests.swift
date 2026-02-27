@@ -1613,4 +1613,90 @@ private func makeTripWithDays(
     #expect(manager.hasConflictingTrips(startDate: date(2026, 7, 1), endDate: date(2026, 7, 5)) == false)
 }
 
+// MARK: - 13. Trip Completion Score
+
+@Test func completionScoreEmptyTrip() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Empty", destination: "Test", startDate: date(2026, 9, 1), endDate: date(2026, 9, 3))
+
+    let score = DataManager.completionScore(for: trip)
+    #expect(score == 0.0)
+}
+
+@Test func completionScoreFullyPlanned() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Full", destination: "Paris", startDate: date(2026, 9, 1), endDate: date(2026, 9, 3))
+    trip.budgetAmount = 2000
+    try? context.save()
+
+    // Add stop to every day
+    for day in trip.daysArray {
+        manager.addStop(to: day, name: "Stop \(day.dayNumber)", latitude: 0, longitude: 0, category: .attraction)
+    }
+
+    // Add booking
+    let booking = BookingEntity.create(in: context, type: .flight, title: "Flight")
+    booking.trip = trip
+
+    // Add list with item
+    let list = TripListEntity.create(in: context, name: "Packing")
+    list.trip = trip
+    let item = TripListItemEntity.create(in: context, text: "Passport")
+    item.list = list
+    try? context.save()
+
+    let score = DataManager.completionScore(for: trip)
+    #expect(score == 1.0)
+}
+
+@Test func completionScorePartiallyPlanned() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Partial", destination: "Rome", startDate: date(2026, 10, 1), endDate: date(2026, 10, 3))
+
+    // Add stop to only first day (2 of 5 criteria: hasStops but not allDaysHaveStops)
+    let day1 = trip.daysArray.sorted { $0.dayNumber < $1.dayNumber }.first!
+    manager.addStop(to: day1, name: "Colosseum", latitude: 41.89, longitude: 12.49, category: .attraction)
+
+    // Set budget (1 more criterion)
+    trip.budgetAmount = 1000
+    try? context.save()
+
+    let score = DataManager.completionScore(for: trip)
+    // hasStops (1) + budget (1) = 2/5 = 0.4
+    #expect(score == 0.4)
+}
+
+@Test func completionScoreIncrements() {
+    let context = makeTestContext()
+    let manager = DataManager(context: context)
+    let trip = manager.createTrip(name: "Incremental", destination: "Test", startDate: date(2026, 11, 1), endDate: date(2026, 11, 1))
+
+    // Start: 0/5 = 0.0
+    #expect(DataManager.completionScore(for: trip) == 0.0)
+
+    // Add stop to the only day → hasStops (1) + allDaysHaveStops (1) = 2/5
+    let day = trip.daysArray.first!
+    manager.addStop(to: day, name: "S", latitude: 0, longitude: 0, category: .other)
+    #expect(DataManager.completionScore(for: trip) == 0.4)
+
+    // Add budget → 3/5
+    trip.budgetAmount = 500
+    #expect(DataManager.completionScore(for: trip) == 0.6)
+
+    // Add booking → 4/5
+    let booking = BookingEntity.create(in: context, type: .hotel, title: "Hotel")
+    booking.trip = trip
+    #expect(DataManager.completionScore(for: trip) == 0.8)
+
+    // Add list with item → 5/5
+    let list = TripListEntity.create(in: context, name: "List")
+    list.trip = trip
+    let item = TripListItemEntity.create(in: context, text: "Item")
+    item.list = list
+    #expect(DataManager.completionScore(for: trip) == 1.0)
+}
+
 } // end TripWitTests suite

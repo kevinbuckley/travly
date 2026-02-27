@@ -455,6 +455,40 @@ final class DataManager {
         return clone
     }
 
+    // MARK: - Completion Score
+
+    /// Computes a trip readiness score from 0.0 to 1.0 based on planning completeness.
+    /// Scoring criteria (equal weight):
+    /// - Has at least one stop planned
+    /// - Has at least one booking
+    /// - Every day has at least one stop
+    /// - Has budget set (budgetAmount > 0)
+    /// - Has at least one list with items
+    static func completionScore(for trip: TripEntity) -> Double {
+        var earned = 0.0
+        let totalCriteria = 5.0
+
+        let days = trip.daysArray
+        let stops = days.flatMap(\.stopsArray)
+
+        // 1. Has at least one stop
+        if !stops.isEmpty { earned += 1 }
+
+        // 2. Has at least one booking
+        if !trip.bookingsArray.isEmpty { earned += 1 }
+
+        // 3. Every day has at least one stop
+        if !days.isEmpty && days.allSatisfy({ !$0.stopsArray.isEmpty }) { earned += 1 }
+
+        // 4. Has budget set
+        if trip.budgetAmount > 0 { earned += 1 }
+
+        // 5. Has at least one list with items
+        if trip.listsArray.contains(where: { !$0.itemsArray.isEmpty }) { earned += 1 }
+
+        return earned / totalCriteria
+    }
+
     // MARK: - Conflict Detection
 
     /// Returns trips that overlap with the given date range, excluding `excludeTrip` if provided.
