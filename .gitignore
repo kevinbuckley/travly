@@ -25,6 +25,9 @@ Packages/TripCore/.build/
 *.swp
 *~
 
+# Screenshot tools
+Screenshots/tools/node_modules/
+
 # Misc
 *.hmap
 *.ipa

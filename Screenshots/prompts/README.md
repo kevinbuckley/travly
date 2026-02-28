@@ -109,7 +109,7 @@ Sophisticated and organized — the feeling of having everything under control.
 ```
 Create a stunning App Store promotional screenshot at exactly 1290x2796 pixels for an iOS travel planning app called "TripWit".
 
-This screenshot showcases the NEW collaboration feature — real-time trip sharing via iCloud.
+This screenshot showcases the collaboration feature — real-time trip sharing.
 
 Design specifications:
 - Show TWO iPhone 15 Pro device frames (titanium finish) side by side, slightly overlapping, both angled inward toward each other (creating a V shape)
@@ -118,7 +118,7 @@ Design specifications:
 - Both phones should show realistic iOS UI in a clean, modern style matching Apple's design language
 - Background: A vibrant gradient from electric blue (#2563EB) to violet purple (#7C3AED), with subtle connection line graphics between the two phones (like a gentle arc or shared cloud icon)
 - Top headline in clean white sans-serif font: "Plan Together, Travel Together"
-- Subheadline: "Share trips with friends and family via iCloud — changes sync instantly"
+- Subheadline: "Share trips with friends and family — changes sync instantly"
 - Subtle glow connecting both phones
 - Keep it minimal and premium — Apple-quality
 - No watermarks
@@ -143,7 +143,7 @@ Design specifications:
 - Below that, 4-5 feature bullet points in a clean vertical layout, each with a small SF Symbols-style icon:
   • ✈️ "Smart Trip Planning" — organize every day, stop, and booking
   • 🗺️ "Interactive Maps" — see your route with all stops plotted
-  • 👥 "Real-time Collaboration" — share trips via iCloud with anyone
+  • 👥 "Real-time Collaboration" — share trips with anyone
   • ⭐ "Wishlist & Discovery" — save dream spots for future trips
   • 📊 "Budget Tracking" — monitor expenses by category
 - Each feature line should have a subtle glassmorphism card background

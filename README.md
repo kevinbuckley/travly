@@ -2,7 +2,7 @@
 
 A privacy-first, AI-native iOS travel planner that spans the full trip lifecycle: **Plan > Experience > Remember**.
 
-**No ads. No tracking. No accounts. No subscriptions.** Your travel data stays on your devices, synced privately through iCloud.
+**No ads. No tracking. No accounts. No subscriptions.** Your travel data stays on your device.
 
 Plan dozens of future trips with detailed itineraries, collaborate on trips with friends and family, use the app while traveling to track your journey, and automatically match photos from your camera roll to locations using GPS metadata.
 
@@ -30,15 +30,14 @@ TripWit is the **Apple Notes of travel planning** — private, fast, works offli
 | **Subscription** | Free, no paywall | Freemium (~$35/yr) | Freemium ($49/yr) | Freemium (~$24/yr) |
 | **Account required** | No | Yes | Yes | Yes |
 | **Offline** | Full (local DB) | Basic free / Pro full | Itinerary only | Documents free / Full Pro |
-| **iCloud Sync** | Yes (automatic) | Cross-device sync | Cross-device sync | Cross-device sync |
-| **Collaboration** | Yes (iCloud sharing) | Yes (free) | Yes (basic free) | Yes |
+| **Collaboration** | Yes (via Messages) | Yes (free) | Yes (basic free) | Yes |
 
 ### Unique advantages
 
 - **Zero data collection** — no analytics, no telemetry, no ad SDKs, no third-party trackers
 - **No account required** — open the app and start planning immediately
 - **On-device AI** via Apple Intelligence — suggestions, vibe-based planning, itinerary parsing, nearby discovery, and place geocoding, all without sending data to the cloud
-- **Real-time collaboration** — share trips with friends and family via iMessage, everyone can edit and changes sync instantly
+- **Real-time collaboration** — share trips with friends and family via Messages, everyone can edit
 - **Photo matching** — automatically matches camera roll photos to trip stops using GPS and timestamps
 - **Weather forecasts** built into the day-by-day view
 - **Paste any itinerary** — convert ChatGPT outputs, blog posts, or emails into structured days and stops
@@ -48,7 +47,7 @@ TripWit is the **Apple Notes of travel planning** — private, fast, works offli
 
 ### Security & Privacy
 
-- **All data stored locally** in Core Data with optional iCloud sync — never touches third-party servers
+- **All data stored locally** in Core Data — never touches third-party servers
 - **No ad frameworks** — zero AdMob, Meta SDK, or any advertising code in the binary
 - **No analytics SDKs** — no Firebase, Mixpanel, Amplitude, or telemetry of any kind
 - **On-device AI only** — Apple Intelligence runs locally, no prompts or data sent to cloud LLMs
@@ -70,8 +69,7 @@ Solo travelers, couples, and groups who want powerful planning tools without sub
 - Budget tracking with currency support
 
 ### Collaborative Sharing
-- Share trips with friends and family via iMessage
-- Real-time sync — everyone sees changes instantly
+- Share trips with friends and family via Messages
 - Shared trips appear in a dedicated "Shared with Me" section
 - Full edit access for collaborators
 - Import/export trips as `.tripwit` files to share with anyone
@@ -134,10 +132,6 @@ Solo travelers, couples, and groups who want powerful planning tools without sub
 - Add trip days to Apple Calendar with stop details
 - Export/import `.tripwit` files for backup or sharing
 
-### Sync
-- iCloud sync across all your Apple devices
-- CloudKit-powered collaborative sharing with other users
-
 ### Visited & Ratings
 - Mark stops as visited with 1-5 star ratings
 - Add comments to any stop
@@ -147,7 +141,7 @@ Solo travelers, couples, and groups who want powerful planning tools without sub
 | Layer | Technology |
 |-------|-----------|
 | UI | SwiftUI |
-| Data | Core Data + CloudKit (NSPersistentCloudKitContainer) |
+| Data | Core Data |
 | Maps | MapKit |
 | AI | Apple Intelligence (FoundationModels) |
 | Weather | Open-Meteo API |
@@ -167,9 +161,9 @@ TripWit/
 │   └── Tests/TripCoreTests/    <- Unit tests
 ├── TripWit/                     <- SwiftUI app
 │   ├── Data/                   <- Core Data entities, PersistenceController, DataManager
-│   ├── Services/               <- CalendarService, WeatherService, TravelTime, PDF, TextExporter, CloudKitSharingService
+│   ├── Services/               <- CalendarService, WeatherService, TravelTime, PDF, TextExporter
 │   ├── Views/                  <- All screens
-│   └── Views/Components/       <- Reusable UI components (CloudSharingView, WeatherSection, etc.)
+│   └── Views/Components/       <- Reusable UI components (WeatherSection, etc.)
 ├── TripWitTests/                <- App-level tests
 ├── Scripts/                    <- CLI validation scripts
 └── project.yml                 <- XcodeGen project spec

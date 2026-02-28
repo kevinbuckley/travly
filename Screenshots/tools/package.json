@@ -1,0 +1,12 @@
+{
+  "name": "tripwit-screenshots",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App Store screenshot generator for TripWit",
+  "scripts": {
+    "screenshots": "node render.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}
