@@ -541,6 +541,7 @@ struct TripDetailView: View {
     private func daySection(_ day: DayEntity) -> some View {
         let sortedStops = day.stopsArray.sorted { $0.sortOrder < $1.sortOrder }
         let locatedStops = sortedStops.filter { $0.latitude != 0 || $0.longitude != 0 }
+        let accommodation = activeAccommodation(for: day)
 
         return Section {
             dayNotesRow(day)
@@ -548,10 +549,10 @@ struct TripDetailView: View {
             weatherRow(for: day)
 
             // "Staying at" banner for multi-day accommodation
-            if let accommodation = activeAccommodation(for: day) {
+            if let accommodation {
                 stayingAtRow(accommodation)
                 // Travel time from hotel to first located stop on this day
-                if let firstStop = sortedStops.first(where: { $0.latitude != 0 || $0.longitude != 0 }),
+                if let firstStop = locatedStops.first,
                    (accommodation.latitude != 0 || accommodation.longitude != 0) {
                     TravelTimeRow(
                         estimate: travelTimeService.estimate(from: accommodation.id ?? UUID(), to: firstStop.id ?? UUID())
@@ -562,8 +563,8 @@ struct TripDetailView: View {
                 }
             }
 
-            // Daily distance/time summary
-            daySummaryRow(locatedStops: locatedStops)
+            // Daily distance/time summary — includes hotel leg when present
+            daySummaryRow(locatedStops: locatedStops, leadingAccommodation: accommodation)
 
             // Drop zone row — visible only while a stop is being dragged to a different day
             if draggingStopID != nil {
@@ -663,24 +664,61 @@ struct TripDetailView: View {
     // MARK: - Daily Summary
 
     @ViewBuilder
-    private func daySummaryRow(locatedStops: [StopEntity]) -> some View {
-        if locatedStops.count >= 2 {
-            let totalKm = totalDistance(for: locatedStops)
-            let estimates = consecutiveEstimates(for: locatedStops)
-            let totalMinutes = estimates.compactMap(\.drivingMinutes).reduce(0, +)
+    private func daySummaryRow(locatedStops: [StopEntity], leadingAccommodation: StopEntity? = nil) -> some View {
+        // Resolve hotel leg: hotel must have coordinates and there must be a first located stop.
+        let firstLocated = locatedStops.first
+        let hotelLegValid: Bool = {
+            guard let hotel = leadingAccommodation, let _ = firstLocated,
+                  hotel.latitude != 0 || hotel.longitude != 0,
+                  hotel.id != nil else { return false }
+            return true
+        }()
 
-            HStack(spacing: 16) {
-                Label(formatDistance(totalKm), systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-                    .font(.caption)
-                    .foregroundStyle(.teal)
-                if totalMinutes > 0 {
-                    Label(formatDuration(totalMinutes), systemImage: "car.fill")
-                        .font(.caption)
-                        .foregroundStyle(.teal)
+        // Show summary when there are ≥2 stops OR hotel + ≥1 stop.
+        let hasEnoughLegs = locatedStops.count >= 2 || (locatedStops.count >= 1 && hotelLegValid)
+
+        if hasEnoughLegs {
+            // Gather MapKit estimates for consecutive stop pairs.
+            let stopEstimates = consecutiveEstimates(for: locatedStops)
+
+            // Look up the hotel→firstStop estimate (already being calculated by the banner above).
+            let hotelEstimate: TravelTimeService.TravelEstimate? = {
+                guard hotelLegValid,
+                      let hotel = leadingAccommodation, let first = firstLocated,
+                      let hID = hotel.id, let fID = first.id else { return nil }
+                return travelTimeService.estimate(from: hID, to: fID)
+            }()
+
+            let allEstimates = [hotelEstimate].compactMap { $0 } + stopEstimates
+            let totalMinutes = allEstimates.compactMap(\.drivingMinutes).reduce(0, +)
+
+            // Prefer actual road distances from MapKit (consistent with TravelTimeRow).
+            // Fall back to straight-line while estimates are still loading.
+            let routeDistanceM = allEstimates.compactMap(\.distanceMeters).reduce(0.0, +)
+            let displayKm: Double = {
+                if routeDistanceM > 0 { return routeDistanceM / 1000.0 }
+                // Straight-line fallback — prepend hotel position when applicable.
+                var stopsForLine = locatedStops
+                if hotelLegValid, let hotel = leadingAccommodation { stopsForLine = [hotel] + stopsForLine }
+                return stopsForLine.count >= 2 ? totalDistance(for: stopsForLine) : 0
+            }()
+
+            if displayKm > 0 || totalMinutes > 0 {
+                HStack(spacing: 16) {
+                    if displayKm > 0 {
+                        Label(formatDistance(displayKm), systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                            .font(.caption)
+                            .foregroundStyle(.teal)
+                    }
+                    if totalMinutes > 0 {
+                        Label(formatDuration(totalMinutes), systemImage: "car.fill")
+                            .font(.caption)
+                            .foregroundStyle(.teal)
+                    }
+                    Spacer()
                 }
-                Spacer()
+                .padding(.vertical, 2)
             }
-            .padding(.vertical, 2)
         }
     }
 
