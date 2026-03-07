@@ -2979,6 +2979,52 @@ func oldStopTransferDecodes() throws {
     FocusFilterStore.clear()
 }
 
+// MARK: - In-App Review
+
+@Test func reviewThresholdConstants() {
+    #expect(ReviewRequestService.minimumTripsThreshold == 3)
+    #expect(ReviewRequestService.cooldownDays == 90)
+}
+
+@Test func reviewTooFewTripsBlocked() {
+    let d = UserDefaults(suiteName: "test.review.\(UUID())")!
+    #expect(!ReviewRequestService.shouldRequestReview(completedTripsCount: 0, defaults: d))
+    #expect(!ReviewRequestService.shouldRequestReview(completedTripsCount: 2, defaults: d))
+}
+
+@Test func reviewEligibleNeverPrompted() {
+    let d = UserDefaults(suiteName: "test.review.\(UUID())")!
+    #expect(ReviewRequestService.shouldRequestReview(completedTripsCount: 3, defaults: d))
+}
+
+@Test func reviewBlockedWithinCooldown() {
+    let d = UserDefaults(suiteName: "test.review.\(UUID())")!
+    let recentPrompt = Calendar.current.date(byAdding: .day, value: -30, to: Date())!
+    ReviewRequestService.recordPrompt(now: recentPrompt, defaults: d)
+    #expect(!ReviewRequestService.shouldRequestReview(completedTripsCount: 5, defaults: d))
+}
+
+@Test func reviewEligibleAfterCooldown() {
+    let d = UserDefaults(suiteName: "test.review.\(UUID())")!
+    let oldPrompt = Calendar.current.date(byAdding: .day, value: -91, to: Date())!
+    ReviewRequestService.recordPrompt(now: oldPrompt, defaults: d)
+    #expect(ReviewRequestService.shouldRequestReview(completedTripsCount: 5, defaults: d))
+}
+
+@Test func reviewRecordPromptPreventsImmediate() {
+    let d   = UserDefaults(suiteName: "test.review.\(UUID())")!
+    let now = Date()
+    ReviewRequestService.recordPrompt(now: now, defaults: d)
+    let days = ReviewRequestService.daysSinceLastPrompt(now: now, defaults: d)
+    #expect(days == 0)
+    #expect(!ReviewRequestService.shouldRequestReview(completedTripsCount: 10, now: now, defaults: d))
+}
+
+@Test func reviewDaysSincePromptNilWhenNeverPrompted() {
+    let d = UserDefaults(suiteName: "test.review.\(UUID())")!
+    #expect(ReviewRequestService.daysSinceLastPrompt(defaults: d) == nil)
+}
+
 // MARK: - Deep Link Router
 
 @Test func deepLinkParseTripURL() {
