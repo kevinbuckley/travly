@@ -2979,6 +2979,48 @@ func oldStopTransferDecodes() throws {
     FocusFilterStore.clear()
 }
 
+// MARK: - Notification Scheduler (pure-logic helpers)
+
+@Test func notificationIDFormat() {
+    let tripID = UUID()
+    let id = NotificationScheduler.notificationID(tripID: tripID, reminderType: "tripStarting")
+    #expect(id.hasPrefix("tripwit."))
+    #expect(id.contains(tripID.uuidString))
+    #expect(id.hasSuffix(".tripStarting"))
+}
+
+@Test func notificationIDUniquenessPerType() {
+    let tripID = UUID()
+    let id1 = NotificationScheduler.notificationID(tripID: tripID, reminderType: "flightDeparture")
+    let id2 = NotificationScheduler.notificationID(tripID: tripID, reminderType: "hotelCheckIn")
+    #expect(id1 != id2)
+}
+
+@Test func notificationCategoryID() {
+    #expect(NotificationScheduler.categoryID == "com.kevinbuckley.travelplanner.tripReminder")
+}
+
+@Test func notificationActionIDs() {
+    #expect(NotificationScheduler.markVisitedActionID == "MARK_VISITED")
+    #expect(NotificationScheduler.viewTripActionID    == "VIEW_TRIP")
+}
+
+@Test func notificationTripIDFromUserInfo() {
+    let id   = UUID()
+    let info: [AnyHashable: Any] = ["tripID": id.uuidString, "reminderType": "hotelCheckIn"]
+    #expect(NotificationScheduler.tripID(from: info) == id)
+}
+
+@Test func notificationReminderTypeFromUserInfo() {
+    let info: [AnyHashable: Any] = ["tripID": UUID().uuidString, "reminderType": "flightDeparture"]
+    #expect(NotificationScheduler.reminderType(from: info) == "flightDeparture")
+}
+
+@Test func notificationMissingTripIDReturnsNil() {
+    let info: [AnyHashable: Any] = ["reminderType": "hotelCheckIn"]
+    #expect(NotificationScheduler.tripID(from: info) == nil)
+}
+
 // MARK: - In-App Review
 
 @Test func reviewThresholdConstants() {
