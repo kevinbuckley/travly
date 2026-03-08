@@ -3,12 +3,14 @@
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import AdUnit from "@/components/ads/AdUnit";
+import { Check, Loader2 } from "lucide-react";
 
 interface HeaderProps {
   showAds?: boolean;
+  saveStatus?: "idle" | "saving" | "saved";
 }
 
-export default function Header({ showAds = false }: HeaderProps) {
+export default function Header({ showAds = false, saveStatus = "idle" }: HeaderProps) {
   const { user, signIn, signOut } = useAuth();
 
   return (
@@ -17,6 +19,24 @@ export default function Header({ showAds = false }: HeaderProps) {
       <div className="flex items-center gap-2 shrink-0">
         <span className="text-xl font-bold text-slate-800">✈ TripWit</span>
       </div>
+
+      {/* Save status indicator */}
+      {user && saveStatus !== "idle" && (
+        <div className="flex items-center gap-1.5 text-xs shrink-0">
+          {saveStatus === "saving" && (
+            <>
+              <Loader2 className="w-3 h-3 text-slate-400 animate-spin" />
+              <span className="text-slate-400">Saving…</span>
+            </>
+          )}
+          {saveStatus === "saved" && (
+            <>
+              <Check className="w-3 h-3 text-green-500" />
+              <span className="text-green-600">Saved</span>
+            </>
+          )}
+        </div>
+      )}
 
       {/* AdSense leaderboard — only for logged-in users when showAds=true */}
       {showAds && user && (

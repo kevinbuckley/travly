@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus,
   Trash2,
@@ -13,6 +13,8 @@ import {
   Star,
   DollarSign,
   FileText,
+  Calendar,
+  GripVertical,
 } from "lucide-react";
 import type { Trip, Day, Stop } from "@/lib/types";
 import { CATEGORY_LABELS, CATEGORY_COLORS, newId, nowISO } from "@/lib/types";
@@ -33,7 +35,33 @@ interface TripDetailProps {
   selectedStopId?: string | null;
 }
 
-const CURRENCIES = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "MXN", "BRL"];
+const CURRENCIES = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "MXN", "BRL", "CNY", "KRW", "THB", "INR"];
+
+function formatDayDate(dateStr: string): string {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr + "T12:00:00");
+    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
+
+function daysBetween(start: string, end: string): number {
+  try {
+    const s = new Date(start + "T00:00:00");
+    const e = new Date(end + "T00:00:00");
+    return Math.max(0, Math.round((e.getTime() - s.getTime()) / 86400000)) + 1;
+  } catch {
+    return 0;
+  }
+}
+
+function addDaysToDate(dateStr: string, n: number): string {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
 
 export default function TripDetail({
   trip,
@@ -53,6 +81,32 @@ export default function TripDetail({
   const [showNotes, setShowNotes] = useState(!!trip.notes);
   const [showBudget, setShowBudget] = useState(trip.budgetAmount > 0);
   const [editingDayLocation, setEditingDayLocation] = useState<string | null>(null);
+  const [dragState, setDragState] = useState<{
+    dayId: string;
+    stopId: string;
+  } | null>(null);
+
+  // Close dialogs on Escape
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        if (editingStop) {
+          setEditingStop(null);
+          e.stopPropagation();
+        }
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editingStop]);
+
+  // When trip changes, expand first day if nothing is expanded
+  useEffect(() => {
+    setExpandedDays((prev) => {
+      if (prev.size === 0 && trip.days[0]) return new Set([trip.days[0].id]);
+      return prev;
+    });
+  }, [trip.id, trip.days]);
 
   // ─── Trip header edits ──────────────────────────────────────────────────────
   function updateField<K extends keyof Trip>(key: K, value: Trip[K]) {
@@ -62,10 +116,14 @@ export default function TripDetail({
   // ─── Days ────────────────────────────────────────────────────────────────────
   function addDay() {
     const maxNum = trip.days.reduce((m, d) => Math.max(m, d.dayNumber), 0);
+    const lastDay = trip.days.length > 0 ? trip.days[trip.days.length - 1] : null;
+    const nextDate = lastDay?.date
+      ? addDaysToDate(lastDay.date, 1)
+      : nowISO().slice(0, 10);
     const newDay: Day = {
       id: newId(),
       dayNumber: maxNum + 1,
-      date: nowISO().slice(0, 10),
+      date: nextDate,
       notes: "",
       location: "",
       locationLatitude: 0,
@@ -74,6 +132,38 @@ export default function TripDetail({
     };
     onUpdateTrip({ days: [...trip.days, newDay] });
     setExpandedDays((s) => new Set([...s, newDay.id]));
+  }
+
+  /** Auto-generate days from date range */
+  function generateDaysFromDates() {
+    if (!trip.startDate || !trip.endDate) return;
+    const count = daysBetween(trip.startDate, trip.endDate);
+    if (count <= 0 || count > 60) return; // sanity limit
+
+    // Preserve existing days where dates overlap
+    const existingByDate = new Map(trip.days.map((d) => [d.date, d]));
+    const newDays: Day[] = [];
+    for (let i = 0; i < count; i++) {
+      const date = addDaysToDate(trip.startDate, i);
+      const existing = existingByDate.get(date);
+      if (existing) {
+        newDays.push({ ...existing, dayNumber: i + 1 });
+      } else {
+        newDays.push({
+          id: newId(),
+          dayNumber: i + 1,
+          date,
+          notes: "",
+          location: "",
+          locationLatitude: 0,
+          locationLongitude: 0,
+          stops: [],
+        });
+      }
+    }
+    onUpdateTrip({ days: newDays, hasCustomDates: true });
+    // Expand first day
+    if (newDays[0]) setExpandedDays(new Set([newDays[0].id]));
   }
 
   function deleteDay(dayId: string) {
@@ -122,6 +212,30 @@ export default function TripDetail({
     saveStop(dayId, updated);
   }
 
+  // ─── Drag reorder stops ────────────────────────────────────────────────────
+  function handleDragStart(dayId: string, stopId: string) {
+    setDragState({ dayId, stopId });
+  }
+
+  function handleDragOver(e: React.DragEvent, dayId: string, targetStopId: string) {
+    e.preventDefault();
+    if (!dragState || dragState.dayId !== dayId || dragState.stopId === targetStopId) return;
+    const day = trip.days.find((d) => d.id === dayId);
+    if (!day) return;
+    const stops = [...day.stops];
+    const fromIdx = stops.findIndex((s) => s.id === dragState.stopId);
+    const toIdx = stops.findIndex((s) => s.id === targetStopId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const [moved] = stops.splice(fromIdx, 1);
+    stops.splice(toIdx, 0, moved);
+    const reordered = stops.map((s, i) => ({ ...s, sortOrder: i }));
+    updateDay(dayId, { stops: reordered });
+  }
+
+  function handleDragEnd() {
+    setDragState(null);
+  }
+
   // ─── Sharing ─────────────────────────────────────────────────────────────────
   async function toggleShare() {
     const newPublic = !trip.isPublic;
@@ -135,6 +249,10 @@ export default function TripDetail({
   }
 
   const sortedDays = [...trip.days].sort((a, b) => a.dayNumber - b.dayNumber);
+  const totalStops = trip.days.reduce((c, d) => c + d.stops.length, 0);
+  const visitedStops = trip.days.reduce(
+    (c, d) => c + d.stops.filter((s) => s.isVisited).length, 0
+  );
 
   const TAB_ITEMS: { key: Tab; label: string; count?: number }[] = [
     { key: "days", label: "Days", count: trip.days.length },
@@ -165,36 +283,48 @@ export default function TripDetail({
         {/* Dates + Status + Share row */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1 text-xs text-slate-500">
-            <span>From</span>
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
             <input
               type="date"
               value={trip.startDate?.slice(0, 10) ?? ""}
               onChange={(e) => updateField("startDate", e.target.value)}
-              className="border border-slate-200 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
-            <span>to</span>
+            <span className="text-slate-400">→</span>
             <input
               type="date"
               value={trip.endDate?.slice(0, 10) ?? ""}
               onChange={(e) => updateField("endDate", e.target.value)}
-              className="border border-slate-200 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
+
+          {/* Auto-generate days button */}
+          {trip.startDate && trip.endDate && daysBetween(trip.startDate, trip.endDate) > 0 && (
+            <button
+              onClick={generateDaysFromDates}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-slate-200 text-slate-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+              title="Auto-create days matching your dates"
+            >
+              <Calendar className="w-3 h-3" />
+              {trip.days.length === 0 ? "Generate days" : "Sync days"}
+            </button>
+          )}
 
           <select
             value={trip.statusRaw}
             onChange={(e) => updateField("statusRaw", e.target.value as Trip["statusRaw"])}
-            className="text-xs border border-slate-200 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="text-xs border border-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400 capitalize"
           >
-            <option value="planning">Planning</option>
-            <option value="active">Active</option>
-            <option value="completed">Completed</option>
+            <option value="planning">📝 Planning</option>
+            <option value="active">🧭 Active</option>
+            <option value="completed">✅ Completed</option>
           </select>
 
           <button
             onClick={toggleShare}
             className={cn(
-              "flex items-center gap-1 text-xs px-2 py-0.5 rounded border transition-colors",
+              "flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors",
               trip.isPublic
                 ? "border-green-400 text-green-700 bg-green-50"
                 : "border-slate-200 text-slate-500 hover:border-blue-400"
@@ -209,28 +339,41 @@ export default function TripDetail({
             )}
           </button>
 
-          {/* Toggle budget */}
           <button
             onClick={() => setShowBudget(!showBudget)}
             className={cn(
-              "flex items-center gap-1 text-xs px-2 py-0.5 rounded border transition-colors",
+              "flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors",
               showBudget ? "border-blue-400 text-blue-600 bg-blue-50" : "border-slate-200 text-slate-400 hover:border-blue-400"
             )}
           >
             <DollarSign className="w-3 h-3" /> Budget
           </button>
 
-          {/* Toggle notes */}
           <button
             onClick={() => setShowNotes(!showNotes)}
             className={cn(
-              "flex items-center gap-1 text-xs px-2 py-0.5 rounded border transition-colors",
+              "flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors",
               showNotes ? "border-blue-400 text-blue-600 bg-blue-50" : "border-slate-200 text-slate-400 hover:border-blue-400"
             )}
           >
             <FileText className="w-3 h-3" /> Notes
           </button>
         </div>
+
+        {/* Progress bar for active/completed trips */}
+        {totalStops > 0 && (trip.statusRaw === "active" || trip.statusRaw === "completed") && (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-green-500 rounded-full transition-all"
+                style={{ width: `${Math.round((visitedStops / totalStops) * 100)}%` }}
+              />
+            </div>
+            <span className="text-xs text-slate-400 shrink-0">
+              {visitedStops}/{totalStops} visited
+            </span>
+          </div>
+        )}
 
         {/* Budget row */}
         {showBudget && (
@@ -243,12 +386,12 @@ export default function TripDetail({
               value={trip.budgetAmount || ""}
               onChange={(e) => updateField("budgetAmount", parseFloat(e.target.value) || 0)}
               placeholder="Budget amount"
-              className="border border-slate-200 rounded px-2 py-0.5 text-xs w-28 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="border border-slate-200 rounded px-2 py-1 text-xs w-28 focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
             <select
               value={trip.budgetCurrencyCode || "USD"}
               onChange={(e) => updateField("budgetCurrencyCode", e.target.value)}
-              className="text-xs border border-slate-200 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="text-xs border border-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
             >
               {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -310,10 +453,29 @@ export default function TripDetail({
       {/* Days tab */}
       {tab === "days" && (
         <div className="flex-1 overflow-y-auto">
+          {sortedDays.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+              <div className="text-4xl mb-3">📅</div>
+              <p className="text-sm font-medium text-slate-600 mb-1">No days yet</p>
+              <p className="text-xs text-slate-400 max-w-xs mb-4">
+                {trip.startDate && trip.endDate
+                  ? "Click \"Generate days\" above to auto-create days from your dates, or add them manually."
+                  : "Set your trip dates above or add days manually to start building your itinerary."}
+              </p>
+              <button
+                onClick={addDay}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add First Day
+              </button>
+            </div>
+          )}
+
           {sortedDays.map((day, dayIdx) => (
             <div key={day.id}>
               {/* Ad between days */}
-              {showAds && dayIdx > 0 && (
+              {showAds && dayIdx > 0 && dayIdx % 3 === 0 && (
                 <div className="px-5 py-2 flex justify-center">
                   <AdUnit slot="BETWEEN_DAYS_SLOT" format="horizontal" style={{ width: 468, height: 60 }} />
                 </div>
@@ -321,7 +483,10 @@ export default function TripDetail({
 
               {/* Day header */}
               <div
-                className="flex items-center gap-2 px-5 py-3 cursor-pointer hover:bg-slate-50 border-b border-slate-100 group"
+                className={cn(
+                  "flex items-center gap-2 px-5 py-3 cursor-pointer hover:bg-slate-50 border-b border-slate-100 group",
+                  expandedDays.has(day.id) && "bg-slate-50/50"
+                )}
                 onClick={() => toggleDay(day.id)}
               >
                 <div className="flex-1">
@@ -329,14 +494,22 @@ export default function TripDetail({
                     <span className="text-sm font-semibold text-slate-700">
                       Day {day.dayNumber}
                     </span>
-                    {day.date && (
-                      <input
-                        type="date"
-                        value={day.date}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => updateDay(day.id, { date: e.target.value })}
-                        className="text-xs text-slate-400 border-0 outline-none bg-transparent cursor-pointer"
-                      />
+                    <span className="text-xs text-slate-400">
+                      {formatDayDate(day.date)}
+                    </span>
+                    <input
+                      type="date"
+                      value={day.date}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => updateDay(day.id, { date: e.target.value })}
+                      className="text-xs text-slate-400 border-0 outline-none bg-transparent cursor-pointer opacity-0 group-hover:opacity-100 w-5 transition-opacity"
+                      title="Change date"
+                    />
+                    {/* Stop count badge */}
+                    {day.stops.length > 0 && !expandedDays.has(day.id) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                        {day.stops.length} {day.stops.length === 1 ? "stop" : "stops"}
+                      </span>
                     )}
                   </div>
                   {/* Day location */}
@@ -386,12 +559,19 @@ export default function TripDetail({
                     .map((stop) => (
                       <div
                         key={stop.id}
+                        draggable
+                        onDragStart={() => handleDragStart(day.id, stop.id)}
+                        onDragOver={(e) => handleDragOver(e, day.id, stop.id)}
+                        onDragEnd={handleDragEnd}
                         className={cn(
-                          "group flex items-start gap-3 px-5 py-3 border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors",
-                          selectedStopId === stop.id && "bg-blue-50 hover:bg-blue-50"
+                          "group flex items-start gap-2 px-5 py-3 border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors",
+                          selectedStopId === stop.id && "bg-blue-50 hover:bg-blue-50",
+                          dragState?.stopId === stop.id && "opacity-40"
                         )}
                         onClick={() => onSelectStop?.(stop.id)}
                       >
+                        {/* Drag handle */}
+                        <GripVertical className="w-3.5 h-3.5 mt-1 shrink-0 text-slate-200 group-hover:text-slate-400 cursor-grab active:cursor-grabbing" />
                         {/* Category dot */}
                         <div
                           className="w-3 h-3 rounded-full mt-1 shrink-0"
@@ -415,13 +595,18 @@ export default function TripDetail({
                           </div>
                           {stop.arrivalTime && (
                             <div className="text-xs text-slate-400">
-                              {new Date(stop.arrivalTime).toLocaleTimeString([], {
+                              🕐 {new Date(stop.arrivalTime).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}
+                              {stop.departureTime && (
+                                <> – {new Date(stop.departureTime).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}</>
+                              )}
                             </div>
                           )}
-                          {/* Booking details badge */}
                           {stop.flightNumber && (
                             <div className="text-xs text-blue-500 mt-0.5">
                               ✈️ {[stop.airline, stop.flightNumber].filter(Boolean).join(" ")}
@@ -431,7 +616,7 @@ export default function TripDetail({
                           )}
                           {stop.confirmationCode && !stop.flightNumber && (
                             <div className="text-xs text-slate-400 mt-0.5">
-                              Conf: <span className="font-mono">{stop.confirmationCode}</span>
+                              📋 <span className="font-mono">{stop.confirmationCode}</span>
                             </div>
                           )}
                           {stop.rating > 0 && (
@@ -469,7 +654,12 @@ export default function TripDetail({
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={(e) => { e.stopPropagation(); toggleVisited(day.id, stop); }}
-                            className="p-1 rounded hover:bg-green-50 text-slate-300 hover:text-green-600 transition-colors"
+                            className={cn(
+                              "p-1 rounded transition-colors",
+                              stop.isVisited
+                                ? "bg-green-50 text-green-600 hover:bg-green-100"
+                                : "hover:bg-green-50 text-slate-300 hover:text-green-600"
+                            )}
                             title={stop.isVisited ? "Mark unvisited" : "Mark visited"}
                           >
                             <Check className="w-3.5 h-3.5" />
@@ -506,13 +696,15 @@ export default function TripDetail({
           ))}
 
           {/* Add day */}
-          <button
-            onClick={addDay}
-            className="flex items-center gap-2 px-5 py-3 w-full text-sm text-slate-500 hover:bg-slate-50 transition-colors border-t border-slate-100"
-          >
-            <Plus className="w-4 h-4" />
-            Add day
-          </button>
+          {sortedDays.length > 0 && (
+            <button
+              onClick={addDay}
+              className="flex items-center gap-2 px-5 py-3 w-full text-sm text-slate-500 hover:bg-slate-50 transition-colors border-t border-slate-100"
+            >
+              <Plus className="w-4 h-4" />
+              Add day
+            </button>
+          )}
         </div>
       )}
 
