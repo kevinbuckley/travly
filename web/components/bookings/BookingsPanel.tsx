@@ -34,6 +34,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function BookingsPanel({ trip, onUpdateTrip }: BookingsPanelProps) {
   const [editing, setEditing] = useState<Booking | null | "new">(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const bookings = [...trip.bookings].sort((a, b) => a.sortOrder - b.sortOrder);
 
@@ -84,20 +85,33 @@ export default function BookingsPanel({ trip, onUpdateTrip }: BookingsPanelProps
                       {TYPE_LABELS[b.typeRaw]}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <button
-                      onClick={() => setEditing(b)}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => deleteBooking(b.id)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {confirmDeleteId === b.id ? (
+                    <div className="flex flex-col gap-1 shrink-0 items-end">
+                      <button
+                        onClick={() => { deleteBooking(b.id); setConfirmDeleteId(null); }}
+                        className="text-[10px] text-red-500 hover:text-red-700 font-semibold"
+                      >Delete</button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-[10px] text-slate-400 hover:text-slate-600"
+                      >Cancel</button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => setEditing(b)}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-700 transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(b.id)}
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-2 space-y-1">

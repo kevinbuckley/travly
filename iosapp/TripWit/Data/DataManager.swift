@@ -435,6 +435,14 @@ final class DataManager {
                 )
                 newStop.day = cloneDay
                 newStop.rating = sourceStop.rating
+                newStop.arrivalTime = sourceStop.arrivalTime
+                newStop.departureTime = sourceStop.departureTime
+                newStop.confirmationCode = sourceStop.confirmationCode
+                newStop.checkOutDate = sourceStop.checkOutDate
+                newStop.airline = sourceStop.airline
+                newStop.flightNumber = sourceStop.flightNumber
+                newStop.departureAirport = sourceStop.departureAirport
+                newStop.arrivalAirport = sourceStop.arrivalAirport
 
                 // Clone comments
                 for comment in sourceStop.commentsArray {

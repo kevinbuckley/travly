@@ -35,8 +35,8 @@ const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
 const CATEGORY_COLORS_BG: Record<string, string> = {
   accommodation: "bg-purple-50 border-purple-200 text-purple-700",
   restaurant: "bg-orange-50 border-orange-200 text-orange-700",
-  attraction: "bg-blue-50 border-blue-200 text-blue-700",
-  transport: "bg-sky-50 border-sky-200 text-sky-700",
+  attraction: "bg-yellow-50 border-yellow-200 text-yellow-700",
+  transport: "bg-blue-50 border-blue-200 text-blue-700",
   activity: "bg-green-50 border-green-200 text-green-700",
   other: "bg-slate-50 border-slate-200 text-slate-600",
 };
@@ -105,9 +105,14 @@ export default function StopDialog({ stop, onSave, onClose }: StopDialogProps) {
     if (!searchQuery.trim()) { setResults([]); return; }
     searchTimer.current = setTimeout(async () => {
       setSearching(true);
-      const res = await searchPlaces(searchQuery);
-      setResults(res);
-      setSearching(false);
+      try {
+        const res = await searchPlaces(searchQuery);
+        setResults(res);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
     }, 600);
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [searchQuery]);

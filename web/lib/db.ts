@@ -50,8 +50,8 @@ function tripToRow(trip: Trip): TripRow {
   };
 }
 
-function changestoRow(changes: Partial<Trip>): TripRow {
-  const row: TripRow = {};
+function changesToRow(changes: Partial<Trip>): TripRow {
+  const row: TripRow = { updated_at: nowISO() };
   if (changes.isPublic !== undefined) row.is_public = changes.isPublic;
   if (changes.name !== undefined) row.name = changes.name;
   if (changes.destination !== undefined) row.destination = changes.destination;
@@ -132,7 +132,7 @@ export async function updateTrip(tripId: string, changes: Partial<Trip>): Promis
   const supabase = createClient();
   const { error } = await supabase
     .from("trips")
-    .update(changestoRow(changes))
+    .update(changesToRow(changes))
     .eq("id", tripId);
   if (error) throw error;
 }

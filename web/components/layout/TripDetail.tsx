@@ -77,6 +77,8 @@ export default function TripDetail({
   const [showBudget, setShowBudget] = useState(trip.budgetAmount > 0);
   const [editingDayLocation, setEditingDayLocation] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{ dayId: string; stopId: string } | null>(null);
+  const [confirmDeleteStopId, setConfirmDeleteStopId] = useState<string | null>(null);
+  const [daysLimitWarning, setDaysLimitWarning] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -109,7 +111,12 @@ export default function TripDetail({
   function generateDaysFromDates() {
     if (!trip.startDate || !trip.endDate) return;
     const count = daysBetween(trip.startDate, trip.endDate);
-    if (count <= 0 || count > 60) return;
+    if (count <= 0) return;
+    if (count > 60) {
+      setDaysLimitWarning(true);
+      setTimeout(() => setDaysLimitWarning(false), 4000);
+      return;
+    }
     const existingByDate = new Map(trip.days.map((d) => [d.date, d]));
     const newDays: Day[] = Array.from({ length: count }, (_, i) => {
       const date = addDaysToDate(trip.startDate, i);
@@ -142,6 +149,7 @@ export default function TripDetail({
     const day = trip.days.find((d) => d.id === dayId);
     if (!day) return;
     updateDay(dayId, { stops: day.stops.filter((s) => s.id !== stopId) });
+    setConfirmDeleteStopId(null);
   }
   function toggleVisited(dayId: string, stop: Stop) {
     saveStop(dayId, { ...stop, isVisited: !stop.isVisited, visitedAt: !stop.isVisited ? nowISO() : undefined });
@@ -228,6 +236,11 @@ export default function TripDetail({
               <Calendar className="w-3 h-3" />
               {trip.days.length === 0 ? "Generate days" : "Sync days"}
             </button>
+          )}
+          {daysLimitWarning && (
+            <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg font-medium">
+              Max 60 days
+            </span>
           )}
 
           <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5 gap-0.5 shrink-0">
@@ -548,25 +561,38 @@ export default function TripDetail({
                           </div>
 
                           {/* Stop actions */}
-                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                            <button onClick={(e) => { e.stopPropagation(); toggleVisited(day.id, stop); }}
-                              className={cn("w-7 h-7 rounded-lg flex items-center justify-center transition-colors",
-                                stop.isVisited ? "bg-emerald-50 text-emerald-600" : "text-slate-300 hover:bg-emerald-50 hover:text-emerald-600"
-                              )}
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); setEditingStop({ dayId: day.id, stop }); }}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); deleteStop(day.id, stop.id); }}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                          {confirmDeleteStopId === stop.id ? (
+                            <div className="flex flex-col gap-1 shrink-0 items-end pl-1" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteStop(day.id, stop.id); }}
+                                className="text-[10px] text-red-500 hover:text-red-700 font-semibold whitespace-nowrap"
+                              >Delete</button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setConfirmDeleteStopId(null); }}
+                                className="text-[10px] text-slate-400 hover:text-slate-600"
+                              >Cancel</button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <button onClick={(e) => { e.stopPropagation(); toggleVisited(day.id, stop); }}
+                                className={cn("w-7 h-7 rounded-lg flex items-center justify-center transition-colors",
+                                  stop.isVisited ? "bg-emerald-50 text-emerald-600" : "text-slate-200 hover:bg-emerald-50 hover:text-emerald-600"
+                                )}
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); setEditingStop({ dayId: day.id, stop }); }}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-200 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteStopId(stop.id); }}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-200 hover:bg-red-50 hover:text-red-500 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}

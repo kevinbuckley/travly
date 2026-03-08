@@ -293,7 +293,7 @@ struct SettingsView: View {
 
     private func deleteAllTrips() {
         let manager = DataManager(context: viewContext)
-        for trip in allTrips {
+        for trip in Array(allTrips) {
             manager.deleteTrip(trip)
         }
     }

@@ -652,8 +652,13 @@ struct TripDetailView: View {
             }
             .onDelete { offsets in
                 let stops = day.stopsArray.sorted { $0.sortOrder < $1.sortOrder }
-                if let index = offsets.first {
+                if offsets.count == 1, let index = offsets.first {
+                    // Single swipe-to-delete: show confirmation dialog
                     stopToDelete = stops[index]
+                } else {
+                    // Multi-select edit-mode delete: delete all directly
+                    let dm = DataManager(context: viewContext)
+                    for index in offsets { dm.deleteStop(stops[index]) }
                 }
             }
             .onMove { source, destination in

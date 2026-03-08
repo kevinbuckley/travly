@@ -34,31 +34,43 @@ export default function AppPage() {
   }, [user]);
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null;
-  const mapStops: Stop[] = selectedTrip ? selectedTrip.days.flatMap((d) => d.stops) : [];
+  const mapStops: Stop[] = selectedTrip
+    ? selectedTrip.days
+        .flatMap((d) => d.stops)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+    : [];
 
   const handleCreateTrip = useCallback(async () => {
     if (!user) return;
-    const trip = await createTrip(user.id);
-    setTrips((prev) => [trip, ...prev]);
-    setSelectedTripId(trip.id);
+    try {
+      const trip = await createTrip(user.id);
+      setTrips((prev) => [trip, ...prev]);
+      setSelectedTripId(trip.id);
+    } catch { /* silent — trip stays as-is */ }
   }, [user]);
 
   const handleDeleteTrip = useCallback(async (id: string) => {
-    await deleteTrip(id);
-    setTrips((prev) => prev.filter((t) => t.id !== id));
-    setSelectedTripId((cur) => {
-      if (cur !== id) return cur;
-      const remaining = trips.filter((t) => t.id !== id);
-      return remaining[0]?.id ?? null;
-    });
-  }, [trips]);
+    try {
+      await deleteTrip(id);
+      setTrips((prev) => {
+        const remaining = prev.filter((t) => t.id !== id);
+        setSelectedTripId((cur) => {
+          if (cur !== id) return cur;
+          return remaining[0]?.id ?? null;
+        });
+        return remaining;
+      });
+    } catch { /* silent — list stays as-is */ }
+  }, []);
 
   const handleImportTrip = useCallback(async (trip: Trip) => {
     if (!user) return;
-    const tripWithUser = { ...trip, userId: user.id };
-    await insertTrip(tripWithUser);
-    setTrips((prev) => [tripWithUser, ...prev]);
-    setSelectedTripId(trip.id);
+    try {
+      const tripWithUser = { ...trip, userId: user.id };
+      await insertTrip(tripWithUser);
+      setTrips((prev) => [tripWithUser, ...prev]);
+      setSelectedTripId(trip.id);
+    } catch { /* silent — list stays as-is */ }
   }, [user]);
 
   const handleDuplicateTrip = useCallback(async (trip: Trip) => {
@@ -180,10 +192,10 @@ export default function AppPage() {
   // ── Trips loading ─────────────────────────────────────────────────────────
   if (tripsLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-slate-50">
+      <div className="h-screen flex items-center justify-center bg-[#0c111d]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-slate-400">Loading your trips…</span>
+          <span className="text-sm text-slate-500">Loading your trips…</span>
         </div>
       </div>
     );

@@ -31,30 +31,31 @@ struct TripListsSection: View {
     var body: some View {
         if trip.isDeleted || trip.managedObjectContext == nil {
             EmptyView()
-        }
-        ForEach(sortedLists) { list in
-            listSection(list)
-        }
-        addListSection
-        EmptyView()
-            .sheet(item: $dayPickerItem) { item in
-                addToDaySheet(item: item)
+        } else {
+            ForEach(sortedLists) { list in
+                listSection(list)
             }
-            .alert("Delete Item?", isPresented: $showingDeleteConfirmation) {
-                Button("Delete", role: .destructive) {
-                    if let item = itemToDelete {
-                        viewContext.delete(item)
-                        trip.updatedAt = Date()
-                        try? viewContext.save()
+            addListSection
+            EmptyView()
+                .sheet(item: $dayPickerItem) { item in
+                    addToDaySheet(item: item)
+                }
+                .alert("Delete Item?", isPresented: $showingDeleteConfirmation) {
+                    Button("Delete", role: .destructive) {
+                        if let item = itemToDelete {
+                            viewContext.delete(item)
+                            trip.updatedAt = Date()
+                            try? viewContext.save()
+                        }
+                        itemToDelete = nil
                     }
-                    itemToDelete = nil
+                    Button("Cancel", role: .cancel) {
+                        itemToDelete = nil
+                    }
+                } message: {
+                    Text("\"\(itemToDelete?.wrappedText ?? "")\" will be permanently removed.")
                 }
-                Button("Cancel", role: .cancel) {
-                    itemToDelete = nil
-                }
-            } message: {
-                Text("\"\(itemToDelete?.wrappedText ?? "")\" will be permanently removed.")
-            }
+        }
     }
 
     // MARK: - List Section

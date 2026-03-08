@@ -29,7 +29,7 @@ struct EditTripSheet: View {
         _startDate = State(initialValue: trip.startDate ?? Date())
         _endDate = State(initialValue: trip.endDate ?? Date())
         _notes = State(initialValue: trip.notes ?? "")
-        _budgetText = State(initialValue: trip.budgetAmount > 0 ? String(format: "%.0f", trip.budgetAmount) : "")
+        _budgetText = State(initialValue: trip.budgetAmount > 0 ? String(format: "%.2f", trip.budgetAmount) : "")
         _budgetCurrency = State(initialValue: trip.budgetCurrencyCode ?? "USD")
     }
 

@@ -48,6 +48,7 @@ function formatAmount(amount: number, currency: string) {
 
 export default function ExpensesPanel({ trip, onUpdateTrip }: ExpensesPanelProps) {
   const [editing, setEditing] = useState<Expense | null | "new">(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const expenses = [...trip.expenses].sort((a, b) => {
     if (a.dateIncurred !== b.dateIncurred) return a.dateIncurred.localeCompare(b.dateIncurred);
@@ -150,14 +151,27 @@ export default function ExpensesPanel({ trip, onUpdateTrip }: ExpensesPanelProps
             <div className="text-sm font-bold text-slate-800 shrink-0">
               {formatAmount(exp.amount, exp.currencyCode)}
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onClick={() => setEditing(exp)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={() => deleteExpense(exp.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            {confirmDeleteId === exp.id ? (
+              <div className="flex flex-col gap-1 shrink-0 items-end">
+                <button
+                  onClick={() => { deleteExpense(exp.id); setConfirmDeleteId(null); }}
+                  className="text-[10px] text-red-500 hover:text-red-700 font-semibold"
+                >Delete</button>
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="text-[10px] text-slate-400 hover:text-slate-600"
+                >Cancel</button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <button onClick={() => setEditing(exp)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-700 transition-colors">
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => setConfirmDeleteId(exp.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         ))}
 

@@ -611,9 +611,6 @@ struct StopDetailView: View {
                 Text(comment.wrappedCreatedAt, style: .relative)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                + Text(" ago")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
             }
             .padding(.vertical, 2)
             .contentShape(Rectangle())
