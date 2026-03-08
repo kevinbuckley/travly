@@ -28,6 +28,9 @@ Packages/TripCore/.build/
 # Screenshot tools
 Screenshots/tools/node_modules/
 
+# Secrets
+iosapp/Config/Secrets.xcconfig
+
 # Misc
 *.hmap
 *.ipa

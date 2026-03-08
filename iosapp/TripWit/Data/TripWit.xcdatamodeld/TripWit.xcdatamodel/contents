@@ -14,6 +14,8 @@
         <attribute name="hasCustomDates" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
         <attribute name="budgetAmount" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="budgetCurrencyCode" attributeType="String" defaultValueString="USD"/>
+        <attribute name="isPublic" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="supabaseSyncedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="days" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="DayEntity" inverseName="trip" inverseEntity="DayEntity"/>
         <relationship name="bookings" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="BookingEntity" inverseName="trip" inverseEntity="BookingEntity"/>
         <relationship name="lists" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="TripListEntity" inverseName="trip" inverseEntity="TripListEntity"/>

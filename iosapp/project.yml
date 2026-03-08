@@ -7,16 +7,29 @@ options:
 packages:
   TripCore:
     path: Packages/TripCore
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    majorVersion: 8.0.0
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    majorVersion: 2.0.0
 targets:
   TripWit:
     type: application
     platform: iOS
     sources:
       - TripWit
+    configFiles:
+      Debug: Config/Secrets.xcconfig
+      Release: Config/Secrets.xcconfig
     dependencies:
       - package: TripCore
       - target: TripWitWidget
         embed: true
+      - package: GoogleSignIn
+        product: GoogleSignIn
+      - package: Supabase
+        product: Supabase
     entitlements:
       path: TripWit/TripWit.entitlements
       properties:

@@ -4,6 +4,8 @@ import CoreData
 struct SettingsView: View {
 
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(AuthService.self) private var authService
+    @Environment(\.syncService) private var syncService
     @FetchRequest(sortDescriptors: []) private var allTrips: FetchedResults<TripEntity>
 
     @State private var showingDeleteConfirmation = false
@@ -34,6 +36,9 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 4)
             }
+
+            // Account
+            accountSection
 
             // Stats
             Section {
@@ -169,6 +174,114 @@ struct SettingsView: View {
             Text("Example trips have been added to help you explore the app.")
         }
     }
+
+    // MARK: - Account Section
+
+    @ViewBuilder
+    private var accountSection: some View {
+        Section {
+            if authService.isSignedIn {
+                // Signed-in state
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.green)
+                            .frame(width: 32, height: 32)
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.white)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(authService.userEmail ?? "Signed In")
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        syncStatusText
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 2)
+
+                Button {
+                    if let userId = authService.userId {
+                        Task { await syncService?.sync(userId: userId) }
+                    }
+                } label: {
+                    Label {
+                        Text("Sync Now")
+                    } icon: {
+                        if case .syncing = syncService?.state {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                        }
+                    }
+                }
+                .disabled(syncService?.state == .syncing)
+
+                Button(role: .destructive) {
+                    Task { await authService.signOut() }
+                } label: {
+                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                        .foregroundStyle(.red)
+                }
+            } else {
+                // Not signed in
+                Button {
+                    Task { await authService.signInWithGoogle() }
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.white)
+                                .frame(width: 32, height: 32)
+                            Text("G")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.blue)
+                        }
+                        Text("Sign in with Google")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        if authService.isLoading {
+                            ProgressView()
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                .disabled(authService.isLoading)
+            }
+        } header: {
+            Text("Account")
+        } footer: {
+            if authService.isSignedIn {
+                Text("Your trips sync with tripwit.app.")
+            } else {
+                Text("Sign in to sync your trips with tripwit.app.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var syncStatusText: some View {
+        if let svc = syncService {
+            switch svc.state {
+            case .idle:
+                Text("Connected")
+            case .syncing:
+                Text("Syncing…")
+            case .error(let msg):
+                Text("Sync error: \(msg)")
+                    .foregroundStyle(.orange)
+            case .lastSynced(let date):
+                Text("Synced \(date.formatted(.relative(presentation: .named)))")
+            }
+        } else {
+            Text("Connected")
+        }
+    }
+
+    // MARK: - Helpers
 
     private func loadSampleData() {
         let manager = DataManager(context: viewContext)

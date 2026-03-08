@@ -42,6 +42,7 @@
 		53F4D48DF116D248FF462733 /* ShareSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8311EA2CAE8CD21D86330370 /* ShareSheetView.swift */; };
 		5430F48E58F1AD31CD71640C /* DataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00BBD5E6F556E76E373F9044 /* DataManager.swift */; };
 		54A064AE5BFAD5D1DA03D12D /* TripCountdownBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 970721C4E62F1CC4429967BD /* TripCountdownBadge.swift */; };
+		565FA7226D5CCBF344FF7849 /* SupabaseDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFE2F3CC2BC57128F08C5AB0 /* SupabaseDataService.swift */; };
 		5820E9DB75699DA1351A278F /* AddStopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F79604E063472D9C68CCAA0 /* AddStopSheet.swift */; };
 		5F068A242A74C18A5662CA49 /* StopRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B74D269AC7D8A28E91D801 /* StopRowView.swift */; };
 		5FDA0EF0A34DC97FFBE07062 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64F5D920CC422FF9F5AAA8A1 /* SettingsView.swift */; };
@@ -69,6 +70,7 @@
 		964DFC40D406BF25AC71B208 /* WeatherSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B36225DDDC4A3B01D5839BD9 /* WeatherSection.swift */; };
 		9876140D7BB4ACF6D60EFE19 /* AddExpenseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9C1A9EFD2171291EE287BAE /* AddExpenseSheet.swift */; };
 		990DD9CCA7809D7EBC204523 /* TripListItemEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499C19DA9722B0C112A79EF4 /* TripListItemEntity.swift */; };
+		9CA61F468406C073458035AC /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7D8617EA2D9DFE0526A3BE /* AuthService.swift */; };
 		9ED1A1433429BB8ADD66B029 /* WidgetDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FC1856FD70F341127319F4E /* WidgetDataStore.swift */; };
 		A12EDEA5F1ACF0FAC831CDCE /* TripShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8522E9B95522B8E1F7614FC /* TripShareCardView.swift */; };
 		A1A71D9F72A828FC59267E90 /* ImportBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9EBD1E9BA18746B495DCA8C /* ImportBookingSheet.swift */; };
@@ -91,6 +93,7 @@
 		C5F24DD8570045CF65849330 /* TripTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C1DB60E19E03479E51AEFF /* TripTransfer.swift */; };
 		C6606776963776CC2D8C9026 /* PasteItinerarySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B31E47713905F2D6C85C419 /* PasteItinerarySheet.swift */; };
 		CC637CA0104D8714DA958D2D /* TripWitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA06B84BF7A129A1E6B19273 /* TripWitTests.swift */; };
+		CF677C8059A943F4214FCF41 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 39B14D05DFD7DF2B8139247A /* GoogleSignIn */; };
 		D37A78FAE3A7BF98BA92E86C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9AAD3364FAA03F9643B4AA6 /* ContentView.swift */; };
 		D425F56FC9FE4EEFE5FF4031 /* BudgetSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04DCE988463BE5D893BBC13 /* BudgetSection.swift */; };
 		D5CB59877A7A5A4AB7F9C3A9 /* WidgetDataModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 410B28320B0D4039781F7E96 /* WidgetDataModel.swift */; };
@@ -100,6 +103,8 @@
 		DD7535079E68D6F550605EFB /* SpotlightService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49B40A6327715B5DF26B872E /* SpotlightService.swift */; };
 		E0CBA36615DA7532886C66EC /* WeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 134DD99877C00A27A1D008C9 /* WeatherService.swift */; };
 		E1E16E05360A8FEFFF701316 /* TripWitControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E39081E568FF66EB6E4FA38 /* TripWitControl.swift */; };
+		E5748F18476971649D4D740F /* SyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC470468007054EF148D4776 /* SyncService.swift */; };
+		E619173F716A0D9600602F62 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = CD37B1882E3C868CC837527E /* Supabase */; };
 		E7129D516D6E8B6270D9296E /* StopRatingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9035CC1BCC41ED1A003ED6C2 /* StopRatingView.swift */; };
 		E841B4A446679E67973D047A /* StopLinkEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19E1AEE43975C31D6B8ED002 /* StopLinkEntity.swift */; };
 		EF5D0F57C810391BDED13F14 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F1313E4A6CA0532C89CCD58 /* ConfettiView.swift */; };
@@ -191,6 +196,7 @@
 		65329B15B5BD8D32CC8535DE /* BookingEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingEntity.swift; sourceTree = "<group>"; };
 		654930A0211E94AF3F916D3E /* TripWitWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripWitWidgetBundle.swift; sourceTree = "<group>"; };
 		67D662B6109483BED9D957A6 /* ActiveTripDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveTripDashboard.swift; sourceTree = "<group>"; };
+		6C7D8617EA2D9DFE0526A3BE /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		6CB4E202061CCBDE17AC6F81 /* QuickAddStopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddStopSheet.swift; sourceTree = "<group>"; };
 		76CA606643A63C59FFDBDFCA /* ReviewRequestService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewRequestService.swift; sourceTree = "<group>"; };
 		7D9C6DC9D0449296850746B3 /* TripEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripEntity.swift; sourceTree = "<group>"; };
@@ -203,8 +209,10 @@
 		970721C4E62F1CC4429967BD /* TripCountdownBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripCountdownBadge.swift; sourceTree = "<group>"; };
 		98319918A46BDE692A6D3EF9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9DABD113547EC1C4A0292219 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		ADEA83F235BA18A2B3950C5C /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		AE0F0C32F8E3E90FB643E677 /* QuickActionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionService.swift; sourceTree = "<group>"; };
 		AF69C164B3B3F8F2B17B2F8E /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
+		AFE2F3CC2BC57128F08C5AB0 /* SupabaseDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseDataService.swift; sourceTree = "<group>"; };
 		B046880217F77ECB4AA68A94 /* ExpenseEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseEntity.swift; sourceTree = "<group>"; };
 		B36225DDDC4A3B01D5839BD9 /* WeatherSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherSection.swift; sourceTree = "<group>"; };
 		B37F4E6179C53E0C2B9C342E /* TripListEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripListEntity.swift; sourceTree = "<group>"; };
@@ -228,6 +236,7 @@
 		E8522E9B95522B8E1F7614FC /* TripShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripShareCardView.swift; sourceTree = "<group>"; };
 		E9B7DB2F06E1AE7C1A21FA2F /* EditBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditBookingSheet.swift; sourceTree = "<group>"; };
 		EBF0546659AECB2D8FED375B /* WishlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WishlistView.swift; sourceTree = "<group>"; };
+		EC470468007054EF148D4776 /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
 		EC799D5C572DB7286BD59B6B /* PhotoLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryService.swift; sourceTree = "<group>"; };
 		EE0CE3337636477126BD88F3 /* BookingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingDetailView.swift; sourceTree = "<group>"; };
 		EE34DE8873A15664A1FE5036 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
@@ -258,6 +267,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				0FE1131926C8AF675382350B /* TripCore in Frameworks */,
+				CF677C8059A943F4214FCF41 /* GoogleSignIn in Frameworks */,
+				E619173F716A0D9600602F62 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -267,6 +278,7 @@
 		3B3CC387CB3E5582811D8DE1 = {
 			isa = PBXGroup;
 			children = (
+				E51E38538EE016054C811FC7 /* Config */,
 				DA598989062D8B04BD9F81EA /* Packages */,
 				CC483ADA4EF4BB81AD4A9255 /* TripWit */,
 				E2984A4618584B480CCFAC31 /* TripWitTests */,
@@ -410,6 +422,7 @@
 			isa = PBXGroup;
 			children = (
 				2F08BA542E3AC1315B797717 /* AITripPlanner.swift */,
+				6C7D8617EA2D9DFE0526A3BE /* AuthService.swift */,
 				F5D3BBE2E612FAE2E78BFDFE /* BackgroundTaskManager.swift */,
 				EE34DE8873A15664A1FE5036 /* CalendarService.swift */,
 				0EDCD08E4FFE88F74220423A /* DeepLinkRouter.swift */,
@@ -422,6 +435,8 @@
 				76CA606643A63C59FFDBDFCA /* ReviewRequestService.swift */,
 				49B40A6327715B5DF26B872E /* SpotlightService.swift */,
 				C3A0C277D57EC17490B6F128 /* StepCountService.swift */,
+				AFE2F3CC2BC57128F08C5AB0 /* SupabaseDataService.swift */,
+				EC470468007054EF148D4776 /* SyncService.swift */,
 				5AC54C5ED479F576659FF4D9 /* TipJarService.swift */,
 				5F3158948D83F1A1ADDC0E4E /* TravelTimeService.swift */,
 				56A85894E712182C60197441 /* TripGradientTheme.swift */,
@@ -459,6 +474,14 @@
 				FA06B84BF7A129A1E6B19273 /* TripWitTests.swift */,
 			);
 			path = TripWitTests;
+			sourceTree = "<group>";
+		};
+		E51E38538EE016054C811FC7 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				ADEA83F235BA18A2B3950C5C /* Secrets.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -501,6 +524,8 @@
 			name = TripWit;
 			packageProductDependencies = (
 				C4C82DAF0A53C481CC9AC821 /* TripCore */,
+				39B14D05DFD7DF2B8139247A /* GoogleSignIn */,
+				CD37B1882E3C868CC837527E /* Supabase */,
 			);
 			productName = TripWit;
 			productReference = 5DB7E1A49343B505D40FAA71 /* TripWit.app */;
@@ -553,6 +578,8 @@
 			mainGroup = 3B3CC387CB3E5582811D8DE1;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				149452157C05CB7EFDECFFB0 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				E443D3E44FE977B9463DD0CD /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				2934D124FDF106922C90839A /* XCLocalSwiftPackageReference "Packages/TripCore" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -598,6 +625,7 @@
 				9876140D7BB4ACF6D60EFE19 /* AddExpenseSheet.swift in Sources */,
 				5820E9DB75699DA1351A278F /* AddStopSheet.swift in Sources */,
 				4C67288258C595DAC00D4F2D /* AddTripSheet.swift in Sources */,
+				9CA61F468406C073458035AC /* AuthService.swift in Sources */,
 				60E9CA76126D14A162549C50 /* BackgroundTaskManager.swift in Sources */,
 				0DD73F8EE3034502CC03D643 /* BookingDetailView.swift in Sources */,
 				BE4FF4CDFBB6EDA82E787E0E /* BookingEntity.swift in Sources */,
@@ -645,6 +673,8 @@
 				5F068A242A74C18A5662CA49 /* StopRowView.swift in Sources */,
 				9040D5E4E465758E3186916D /* StopTodoEntity.swift in Sources */,
 				7D13FD4BE272EA3B03729C41 /* SuggestStopsSheet.swift in Sources */,
+				565FA7226D5CCBF344FF7849 /* SupabaseDataService.swift in Sources */,
+				E5748F18476971649D4D740F /* SyncService.swift in Sources */,
 				791FC495C1883417D183C89B /* TimelineStopRow.swift in Sources */,
 				52E926BDF916B1D502AD4D45 /* TipJarService.swift in Sources */,
 				AE25E0184E2C931BCB48C7E3 /* TravelTimeRow.swift in Sources */,
@@ -884,6 +914,7 @@
 		};
 		EB509C9C83064434D7A0268A /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = ADEA83F235BA18A2B3950C5C /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TripWit/TripWit.entitlements;
@@ -921,6 +952,7 @@
 		};
 		ED205AAD2F9A8313A46B3BA1 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = ADEA83F235BA18A2B3950C5C /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TripWit/TripWit.entitlements;
@@ -1024,7 +1056,31 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		149452157C05CB7EFDECFFB0 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+		E443D3E44FE977B9463DD0CD /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		39B14D05DFD7DF2B8139247A /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 149452157C05CB7EFDECFFB0 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
 		AE3E93BF74A4B3E4DCD746FE /* TripCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TripCore;
@@ -1032,6 +1088,11 @@
 		C4C82DAF0A53C481CC9AC821 /* TripCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TripCore;
+		};
+		CD37B1882E3C868CC837527E /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E443D3E44FE977B9463DD0CD /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
 		};
 /* End XCSwiftPackageProductDependency section */
 

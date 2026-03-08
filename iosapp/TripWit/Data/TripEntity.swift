@@ -17,6 +17,8 @@ public class TripEntity: NSManagedObject {
     @NSManaged public var hasCustomDates: Bool
     @NSManaged public var budgetAmount: Double
     @NSManaged public var budgetCurrencyCode: String?
+    @NSManaged public var isPublic: Bool
+    @NSManaged public var supabaseSyncedAt: Date?
     @NSManaged public var days: NSSet?
     @NSManaged public var bookings: NSSet?
     @NSManaged public var lists: NSSet?
