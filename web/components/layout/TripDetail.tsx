@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   Plus, Trash2, ChevronDown, ChevronUp, MapPin, Share2, Check,
-  ExternalLink, Star, DollarSign, FileText, Calendar, GripVertical,
+  ExternalLink, Star, DollarSign, FileText, Calendar, GripVertical, Pencil,
 } from "lucide-react";
 import type { Trip, Day, Stop } from "@/lib/types";
 import { CATEGORY_LABELS, CATEGORY_COLORS, newId, nowISO } from "@/lib/types";
@@ -428,7 +428,7 @@ export default function TripDetail({
 
                 {/* ── Stops ─────────────────────────────────────────────────── */}
                 {isExpanded && (
-                  <div className="py-2 px-3 space-y-1.5">
+                  <div className="py-2 px-3 space-y-1.5 day-stops-enter">
                     {sortedStops.map((stop) => (
                       <div
                         key={stop.id}
@@ -524,9 +524,9 @@ export default function TripDetail({
                               <Check className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); setEditingStop({ dayId: day.id, stop }); }}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition-colors text-sm"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition-colors"
                             >
-                              ✏️
+                              <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); deleteStop(day.id, stop.id); }}
                               className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"

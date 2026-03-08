@@ -6,8 +6,8 @@ import type { Stop } from "@/lib/types";
 const TripMap = dynamic(() => import("@/components/map/TripMap"), {
   ssr: false,
   loading: () => (
-    <div className="h-full flex items-center justify-center bg-slate-100 text-slate-400 text-sm">
-      Loading map…
+    <div className="h-full flex flex-col items-center justify-center gap-3 bg-[#f2f0eb]">
+      <div className="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin opacity-40" />
     </div>
   ),
 });
