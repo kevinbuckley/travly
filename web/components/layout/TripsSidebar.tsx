@@ -220,8 +220,8 @@ export default function TripsSidebar({
                   </div>
                   {trip.statusRaw === "active" && stopCount > 0 && (
                     <div className="mt-2 h-[2px] bg-white/8 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500/60 rounded-full transition-all duration-500"
-                        style={{ width: `${progressPct}%` }} />
+                      <div className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${progressPct}%`, background: "linear-gradient(90deg, #34d399, #14b8a6)" }} />
                     </div>
                   )}
                 </div>

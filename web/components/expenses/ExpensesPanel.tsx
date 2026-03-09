@@ -86,7 +86,7 @@ export default function ExpensesPanel({ trip, onUpdateTrip }: ExpensesPanelProps
             </div>
             <div className="flex items-end justify-between">
               <div>
-                <div className="text-3xl font-bold text-slate-900 tracking-tight">
+                <div className={`text-4xl font-black tracking-tight ${isOver ? "text-red-600" : hasBudget ? "text-slate-900" : "text-slate-900"}`}>
                   {formatAmount(totalSpent, budgetCurrency)}
                 </div>
                 {hasBudget && (
@@ -107,8 +107,13 @@ export default function ExpensesPanel({ trip, onUpdateTrip }: ExpensesPanelProps
           {hasBudget && (
             <div className="h-1.5 bg-slate-100">
               <div
-                className={`h-full transition-all duration-500 ${isOver ? "bg-red-500" : "bg-blue-500"}`}
-                style={{ width: `${budgetPct}%` }}
+                className="h-full transition-all duration-500"
+                style={{
+                  width: `${budgetPct}%`,
+                  background: isOver
+                    ? "linear-gradient(90deg, #f87171, #ef4444)"
+                    : "linear-gradient(90deg, #60a5fa, #3b82f6)",
+                }}
               />
             </div>
           )}

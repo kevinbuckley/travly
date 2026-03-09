@@ -224,7 +224,7 @@ export default function StopDialog({ stop, onSave, onClose }: StopDialogProps) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.35)] w-full max-w-xl max-h-[92vh] flex flex-col">
+      <div className="modal-enter bg-white rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.35)] w-full max-w-xl max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2.5">
@@ -446,7 +446,13 @@ export default function StopDialog({ stop, onSave, onClose }: StopDialogProps) {
           {/* Notes */}
           <div>
             <Label>Notes</Label>
-            <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3} placeholder="Any details, tips, or reminders…" />
+            <Textarea
+              value={form.notes}
+              onChange={(e) => set("notes", e.target.value)}
+              onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 200) + "px"; }}
+              rows={3}
+              placeholder="Any details, tips, or reminders…"
+            />
           </div>
 
           {/* Todos */}

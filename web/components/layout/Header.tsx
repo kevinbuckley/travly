@@ -17,10 +17,10 @@ export default function Header({ showAds = false, saveStatus = "idle" }: HeaderP
       {/* Save status — left side */}
       <div className="w-28 shrink-0">
         {user && saveStatus !== "idle" && (
-          <div className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-all ${
+          <div className={`save-status-enter inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium transition-all ${
             saveStatus === "saved"
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-              : "text-slate-400"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-slate-100 text-slate-500"
           }`}>
             {saveStatus === "saving" && (
               <>
@@ -30,8 +30,8 @@ export default function Header({ showAds = false, saveStatus = "idle" }: HeaderP
             )}
             {saveStatus === "saved" && (
               <>
-                <Check className="w-3 h-3" />
-                <span className="font-medium">Saved</span>
+                <Check className="w-3 h-3 text-emerald-400" />
+                <span>Saved</span>
               </>
             )}
           </div>

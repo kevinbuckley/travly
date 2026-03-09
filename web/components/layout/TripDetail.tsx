@@ -288,7 +288,7 @@ export default function TripDetail({
           value={trip.name}
           onChange={(e) => updateField("name", e.target.value)}
           placeholder="Trip name"
-          className="trip-title w-full text-[22px] font-bold text-slate-900 placeholder-slate-300 border-0 outline-none bg-transparent leading-tight"
+          className="trip-title w-full text-[22px] font-extrabold text-slate-900 placeholder-slate-300 border-0 outline-none bg-transparent leading-tight"
         />
         <div className="flex items-center gap-1.5 group">
           <MapPin className="w-3.5 h-3.5 text-slate-300 shrink-0" />
@@ -377,8 +377,8 @@ export default function TripDetail({
         {totalStops > 0 && (trip.statusRaw === "active" || trip.statusRaw === "completed") && (
           <div className="flex items-center gap-2">
             <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                style={{ width: `${Math.round((visitedStops / totalStops) * 100)}%` }} />
+              <div className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${Math.round((visitedStops / totalStops) * 100)}%`, background: "linear-gradient(90deg, #34d399, #14b8a6)" }} />
             </div>
             <span className="text-[11px] text-slate-400 shrink-0 font-medium">
               {visitedStops}/{totalStops} visited
@@ -386,7 +386,8 @@ export default function TripDetail({
           </div>
         )}
 
-        {showBudget && (
+        {/* Budget — animated expand */}
+        <div className={cn("overflow-hidden transition-all duration-200 ease-in-out", showBudget ? "max-h-16 opacity-100" : "max-h-0 opacity-0 !mt-0")}>
           <div className="flex items-center gap-2 pt-1">
             <DollarSign className="w-4 h-4 text-slate-400 shrink-0" />
             <input type="number" min="0" step="0.01" value={trip.budgetAmount || ""}
@@ -401,14 +402,16 @@ export default function TripDetail({
               {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-        )}
+        </div>
 
-        {showNotes && (
+        {/* Notes — animated expand */}
+        <div className={cn("overflow-hidden transition-all duration-200 ease-in-out", showNotes ? "max-h-48 opacity-100" : "max-h-0 opacity-0 !mt-0")}>
           <textarea value={trip.notes} onChange={(e) => updateField("notes", e.target.value)}
+            onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 160) + "px"; }}
             placeholder="Trip notes…" rows={2}
             className="w-full text-sm text-slate-600 placeholder-slate-300 border border-slate-200 rounded-lg px-3 py-2 resize-none bg-white focus:border-blue-400"
           />
-        )}
+        </div>
       </div>
 
       {/* ── Tab bar ─────────────────────────────────────────────────────────── */}
@@ -502,8 +505,14 @@ export default function TripDetail({
                   {/* Day number circle */}
                   <div className={cn(
                     "day-circle w-7 h-7 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 shadow-sm",
-                    isExpanded ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 group-hover:bg-slate-800 group-hover:text-white"
-                  )}>
+                    isExpanded
+                      ? "text-white"
+                      : "bg-slate-100 text-slate-600 group-hover:text-white"
+                  )}
+                  style={isExpanded ? { background: "linear-gradient(135deg, #1e293b, #0f172a)" } : undefined}
+                  onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = "linear-gradient(135deg, #334155, #1e293b)"; }}
+                  onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = ""; }}
+                  >
                     {day.dayNumber}
                   </div>
 
@@ -606,17 +615,18 @@ export default function TripDetail({
                         onClick={() => onSelectStop?.(stop.id)}
                         className={cn(
                           "group flex items-stretch rounded-xl border cursor-pointer transition-all overflow-hidden",
-                          selectedStopId === stop.id
+                          dragState?.stopId === stop.id
+                            ? "border-blue-400 ring-2 ring-blue-300/40 shadow-[0_0_0_2px_rgba(59,130,246,0.12)] opacity-60"
+                            : selectedStopId === stop.id
                             ? "border-blue-300 bg-blue-50/60 shadow-[0_0_0_2px_rgba(59,130,246,0.15)]"
                             : stop.isVisited
-                            ? "border-emerald-100 bg-emerald-50/25 hover:border-emerald-200"
-                            : "border-slate-100 bg-white shadow-card hover:shadow-card-hover hover:border-slate-200",
-                          dragState?.stopId === stop.id && "opacity-40"
+                            ? "border-emerald-100 bg-emerald-50/30 hover:border-emerald-200"
+                            : "border-slate-100 bg-white shadow-card hover:shadow-card-hover hover:border-slate-200"
                         )}
                       >
-                        {/* Category accent bar */}
-                        <div className="w-1 shrink-0 rounded-l-xl transition-all"
-                          style={{ backgroundColor: stop.isVisited ? `${CATEGORY_COLORS[stop.categoryRaw]}55` : CATEGORY_COLORS[stop.categoryRaw] }} />
+                        {/* Category accent bar — w-1.5 for better visibility */}
+                        <div className="w-1.5 shrink-0 rounded-l-xl transition-all"
+                          style={{ backgroundColor: stop.isVisited ? `${CATEGORY_COLORS[stop.categoryRaw]}66` : CATEGORY_COLORS[stop.categoryRaw] }} />
 
                         {/* Drag handle */}
                         <div className="flex items-center px-1.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
@@ -629,11 +639,15 @@ export default function TripDetail({
                             <div className="flex items-center gap-1.5">
                               <span className={cn(
                                 "text-sm font-semibold leading-snug",
-                                stop.isVisited ? "line-through text-slate-400" : "text-slate-900"
+                                stop.isVisited ? "text-slate-400" : "text-slate-900"
                               )}>
                                 {stop.name}
                               </span>
-                              {stop.isVisited && <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                              {stop.isVisited && (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full shrink-0">
+                                  <Check className="w-2.5 h-2.5" /> Visited
+                                </span>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -694,7 +708,7 @@ export default function TripDetail({
                             </div>
                           </div>
 
-                          {/* Stop actions — always visible at low opacity, full on hover */}
+                          {/* Stop actions — visited always visible; edit/delete appear on hover */}
                           <div className="flex items-center gap-0.5 shrink-0">
                             <button onClick={(e) => { e.stopPropagation(); toggleVisited(day.id, stop); }}
                               className={cn("w-7 h-7 rounded-lg flex items-center justify-center transition-colors",
@@ -705,13 +719,13 @@ export default function TripDetail({
                               <Check className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); setEditingStop({ dayId: day.id, stop }); }}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition-all opacity-0 group-hover:opacity-100"
                               title="Edit stop"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); deleteStop(day.id, stop.id); }}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
                               title="Delete stop"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -749,17 +763,23 @@ export default function TripDetail({
 
       {/* ── Undo toast ────────────────────────────────────────────────────────── */}
       {undoItem && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg animate-in slide-in-from-bottom-2 duration-200">
-          <span className="text-slate-300">
-            {undoItem.type === "stop" ? `"${undoItem.stop.name}" deleted` : `Day ${undoItem.day.dayNumber} deleted`}
-          </span>
-          <button
-            onClick={handleUndo}
-            className="flex items-center gap-1 text-blue-400 hover:text-blue-300 font-semibold transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Undo
-          </button>
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col overflow-hidden rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.3)] bg-slate-900" style={{ minWidth: 220 }}>
+          <div className="flex items-center gap-3 px-4 py-2.5">
+            <span className="text-sm text-slate-300 whitespace-nowrap">
+              {undoItem.type === "stop" ? `"${undoItem.stop.name}" deleted` : `Day ${undoItem.day.dayNumber} deleted`}
+            </span>
+            <button
+              onClick={handleUndo}
+              className="flex items-center gap-1 text-blue-400 hover:text-blue-300 font-semibold text-sm transition-colors shrink-0"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Undo
+            </button>
+          </div>
+          {/* Progress bar — depletes over 5s */}
+          <div className="h-0.5 bg-white/10">
+            <div key={undoItem.type + (undoItem.type === "stop" ? undoItem.stop.id : undoItem.day.id)} className="undo-progress h-full bg-blue-500/70 rounded-full" />
+          </div>
         </div>
       )}
 
