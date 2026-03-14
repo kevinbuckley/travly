@@ -72,6 +72,11 @@ export function useGeminiNano() {
   const [available, setAvailable] = useState(false);
 
   useEffect(() => {
+    // Dev override: run  localStorage.setItem('tripwit_debug_ai','1')  in console then reload
+    if (typeof localStorage !== "undefined" && localStorage.getItem("tripwit_debug_ai") === "1") {
+      setAvailable(true);
+      return;
+    }
     const api = getChromeAIApi();
     if (!api) return;
     api.availability().then((status) => {
