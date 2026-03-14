@@ -25,16 +25,17 @@ export default function AppPage() {
   const [mapState, setMapState] = useState<"normal" | "collapsed" | "maximized">("normal");
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("sidebar");
 
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     setTripsLoading(true);
-    getTrips(user.id)
+    getTrips(userId)
       .then((data) => {
         setTrips(data);
-        if (data.length > 0) setSelectedTripId(data[0].id);
+        setSelectedTripId((prev) => prev ?? data[0]?.id ?? null);
       })
       .finally(() => setTripsLoading(false));
-  }, [user]);
+  }, [userId]);
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null;
   const mapStops: Stop[] = selectedTrip
