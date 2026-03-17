@@ -184,16 +184,28 @@ export default function TripDetail({
       setTimeout(() => setDaysLimitWarning(false), 4000);
       return;
     }
-    const existingByDate = new Map(trip.days.map((d) => [d.date, d]));
-    const newDays: Day[] = Array.from({ length: count }, (_, i) => {
+
+    const sorted = [...trip.days].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    const firstDate = sorted[0]?.date ?? "";
+    const lastDate = sorted[sorted.length - 1]?.date ?? "";
+
+    const prepend: Day[] = [];
+    const append: Day[] = [];
+    for (let i = 0; i < count; i++) {
       const date = addDaysToDate(trip.startDate, i);
-      const existing = existingByDate.get(date);
-      return existing ? { ...existing, dayNumber: i + 1 } : {
-        id: newId(), dayNumber: i + 1, date, notes: "", location: "", locationLatitude: 0, locationLongitude: 0, stops: [],
-      };
-    });
-    onUpdateTrip({ days: newDays, hasCustomDates: true });
-    if (newDays[0]) setExpandedDays(new Set([newDays[0].id]));
+      if (!firstDate || date < firstDate) {
+        prepend.push({ id: newId(), dayNumber: 0, date, notes: "", location: "", locationLatitude: 0, locationLongitude: 0, stops: [] });
+      } else if (date > lastDate) {
+        append.push({ id: newId(), dayNumber: 0, date, notes: "", location: "", locationLatitude: 0, locationLongitude: 0, stops: [] });
+      }
+    }
+
+    if (prepend.length === 0 && append.length === 0) return;
+
+    const allDays = [...prepend, ...sorted, ...append].map((d, i) => ({ ...d, dayNumber: i + 1 }));
+    onUpdateTrip({ days: allDays, hasCustomDates: true });
+    const firstNew = prepend[0] ?? append[0];
+    if (firstNew) setExpandedDays(new Set([firstNew.id]));
   }
 
   function deleteDay(dayId: string) {
