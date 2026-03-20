@@ -1,5 +1,7 @@
 import Foundation
 import GoogleSignIn
+import AuthenticationServices
+import CryptoKit
 import Supabase
 import os
 
@@ -74,6 +76,88 @@ final class AuthService {
         }
     }
 
+    // MARK: - Sign In with Apple
+
+    func signInWithApple() async {
+        guard let supabase else {
+            log.error("Supabase not configured — cannot sign in")
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        let rawNonce = randomNonceString()
+        let hashedNonce = sha256(rawNonce)
+
+        do {
+            let credential = try await performAppleSignIn(hashedNonce: hashedNonce)
+
+            guard let appleIDCredential = credential as? ASAuthorizationAppleIDCredential,
+                  let identityTokenData = appleIDCredential.identityToken,
+                  let idToken = String(data: identityTokenData, encoding: .utf8) else {
+                log.error("No ID token from Apple Sign-In")
+                return
+            }
+
+            let session = try await supabase.auth.signInWithIdToken(
+                credentials: .init(provider: .apple, idToken: idToken, nonce: rawNonce)
+            )
+
+            self.userId = session.user.id.uuidString
+            self.userEmail = session.user.email
+            self.isSignedIn = true
+            log.info("Signed in with Apple as \(session.user.email ?? "unknown")")
+        } catch {
+            if (error as? ASAuthorizationError)?.code == .canceled {
+                log.info("Apple Sign-In cancelled by user")
+            } else {
+                log.error("Apple Sign-In failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func performAppleSignIn(hashedNonce: String) async throws -> ASAuthorizationCredential {
+        let provider = ASAuthorizationAppleIDProvider()
+        let request = provider.createRequest()
+        request.requestedScopes = [.email, .fullName]
+        request.nonce = hashedNonce
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let delegate = AppleSignInDelegate(continuation: continuation)
+            let controller = ASAuthorizationController(authorizationRequests: [request])
+            controller.delegate = delegate
+            // Retain delegate until completion
+            objc_setAssociatedObject(controller, "delegate", delegate, .OBJC_ASSOCIATION_RETAIN)
+            controller.performRequests()
+        }
+    }
+
+    private func randomNonceString(length: Int = 32) -> String {
+        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+        while remainingLength > 0 {
+            var randoms = [UInt8](repeating: 0, count: 16)
+            let status = SecRandomCopyBytes(kSecRandomDefault, randoms.count, &randoms)
+            guard status == errSecSuccess else { fatalError("Unable to generate nonce") }
+            for random in randoms {
+                guard remainingLength > 0 else { break }
+                if random < charset.count {
+                    result.append(charset[Int(random)])
+                    remainingLength -= 1
+                }
+            }
+        }
+        return result
+    }
+
+    private func sha256(_ input: String) -> String {
+        let data = Data(input.utf8)
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
+    }
+
     // MARK: - Sign Out
 
     func signOut() async {
@@ -116,5 +200,30 @@ final class AuthService {
             // No existing session — user is not signed in
             self.isSignedIn = false
         }
+    }
+}
+
+// MARK: - Apple Sign-In Delegate
+
+private final class AppleSignInDelegate: NSObject, ASAuthorizationControllerDelegate, @unchecked Sendable {
+    private let continuation: CheckedContinuation<ASAuthorizationCredential, any Error>
+    private var resumed = false
+
+    init(continuation: CheckedContinuation<ASAuthorizationCredential, any Error>) {
+        self.continuation = continuation
+    }
+
+    func authorizationController(controller: ASAuthorizationController,
+                                 didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard !resumed else { return }
+        resumed = true
+        continuation.resume(returning: authorization.credential)
+    }
+
+    func authorizationController(controller: ASAuthorizationController,
+                                 didCompleteWithError error: any Error) {
+        guard !resumed else { return }
+        resumed = true
+        continuation.resume(throwing: error)
     }
 }

@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import AuthenticationServices
 
 struct SettingsView: View {
 
@@ -258,6 +259,30 @@ struct SettingsView: View {
                 }
             } else {
                 // Not signed in
+                Button {
+                    Task { await authService.signInWithApple() }
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.black)
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "apple.logo")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(.white)
+                        }
+                        Text("Sign in with Apple")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        if authService.isLoading {
+                            ProgressView()
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                .disabled(authService.isLoading)
+
                 Button {
                     Task { await authService.signInWithGoogle() }
                 } label: {

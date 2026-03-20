@@ -14,7 +14,7 @@ import { Map, ChevronLeft, Check, Loader2, Maximize2, Minimize2 } from "lucide-r
 type MobilePanel = "sidebar" | "detail";
 
 export default function AppPage() {
-  const { user, loading, signIn, signOut } = useAuth();
+  const { user, loading, signIn, signInWithApple, signOut } = useAuth();
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
@@ -181,8 +181,17 @@ export default function AppPage() {
               Your itineraries, bookings, and budget — all in one beautiful workspace.
             </p>
             <button
+              onClick={signInWithApple}
+              className="inline-flex items-center gap-3 w-full justify-center px-5 py-3.5 bg-white text-slate-800 rounded-xl font-semibold text-sm hover:bg-slate-50 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:shadow-[0_6px_28px_rgba(59,130,246,0.22),0_4px_20px_rgba(0,0,0,0.2)] mb-3"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+              </svg>
+              Continue with Apple
+            </button>
+            <button
               onClick={signIn}
-              className="inline-flex items-center gap-3 w-full justify-center px-5 py-3.5 bg-white text-slate-800 rounded-xl font-semibold text-sm hover:bg-slate-50 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:shadow-[0_6px_28px_rgba(59,130,246,0.22),0_4px_20px_rgba(0,0,0,0.2)] mb-6"
+              className="inline-flex items-center gap-3 w-full justify-center px-5 py-3.5 bg-white/10 text-white border border-white/10 rounded-xl font-semibold text-sm hover:bg-white/15 active:scale-[0.98] transition-all mb-6"
             >
               <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

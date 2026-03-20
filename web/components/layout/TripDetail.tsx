@@ -154,10 +154,15 @@ export default function TripDetail({
         updateDay(undoItem.dayId, { stops: stops.map((s, i) => ({ ...s, sortOrder: i })) });
       }
     } else if (undoItem.type === "day") {
+      const restored = undoItem.day;
       const days = [...trip.days];
-      days.splice(undoItem.index, 0, undoItem.day);
+      // Insert at correct position by date (or fall back to original index)
+      const insertAt = restored.date
+        ? days.findIndex((d) => d.date > restored.date)
+        : undoItem.index;
+      days.splice(insertAt === -1 ? days.length : insertAt, 0, restored);
       onUpdateTrip({ days: days.map((d, i) => ({ ...d, dayNumber: i + 1 })) });
-      setExpandedDays((s) => new Set([...s, undoItem.day.id]));
+      setExpandedDays((s) => new Set([...s, restored.id]));
     }
     setUndoItem(null);
   }
@@ -186,13 +191,16 @@ export default function TripDetail({
     }
 
     const sorted = [...trip.days].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
-    const firstDate = sorted[0]?.date ?? "";
-    const lastDate = sorted[sorted.length - 1]?.date ?? "";
+    const datedDays = sorted.filter((d) => !!d.date);
+    const existingDates = new Set(datedDays.map((d) => d.date));
+    const firstDate = datedDays[0]?.date ?? "";
+    const lastDate = datedDays[datedDays.length - 1]?.date ?? "";
 
     const prepend: Day[] = [];
     const append: Day[] = [];
     for (let i = 0; i < count; i++) {
       const date = addDaysToDate(trip.startDate, i);
+      if (existingDates.has(date)) continue;
       if (!firstDate || date < firstDate) {
         prepend.push({ id: newId(), dayNumber: 0, date, notes: "", location: "", locationLatitude: 0, locationLongitude: 0, stops: [] });
       } else if (date > lastDate) {

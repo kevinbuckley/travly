@@ -36,3 +36,4 @@ iosapp/Config/Secrets.xcconfig
 *.ipa
 *.dSYM.zip
 *.dSYM
+*.p8
