@@ -180,6 +180,7 @@ export default function AppPage() {
             <p className="text-slate-400 text-[14px] leading-relaxed mb-8 max-w-[280px] mx-auto">
               Your itineraries, bookings, and budget — all in one beautiful workspace.
             </p>
+            {/* Apple Sign-In hidden until iOS app update is deployed
             <button
               onClick={signInWithApple}
               className="inline-flex items-center gap-3 w-full justify-center px-5 py-3.5 bg-white text-slate-800 rounded-xl font-semibold text-sm hover:bg-slate-50 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:shadow-[0_6px_28px_rgba(59,130,246,0.22),0_4px_20px_rgba(0,0,0,0.2)] mb-3"
@@ -189,6 +190,7 @@ export default function AppPage() {
               </svg>
               Continue with Apple
             </button>
+            */}
             <button
               onClick={signIn}
               className="inline-flex items-center gap-3 w-full justify-center px-5 py-3.5 bg-white/10 text-white border border-white/10 rounded-xl font-semibold text-sm hover:bg-white/15 active:scale-[0.98] transition-all mb-6"
